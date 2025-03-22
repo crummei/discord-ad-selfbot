@@ -176,7 +176,7 @@ async def start_timer(message, channel, guild_id):
         delay = advertChannels[guild_id][4] if len(advertChannels[guild_id]) > 4 else defaultDelay
 
     logging.info(f"{YELLOW}Starting delay for{RESET} {guild_id}{YELLOW}:{RESET} "
-             f"{delay // 60}{YELLOW} minutes{RESET}" if delay // 60 <= 60 
+             f"{delay // 60}{YELLOW} minutes{RESET}" if delay // 60 < 60
              else f"{(delay // 60) // 60}{YELLOW} hours{RESET}")
     await asyncio.sleep(delay)
     bot.timers[guild_id] = False
