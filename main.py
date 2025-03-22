@@ -195,6 +195,5 @@ async def on_message(message):
         if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
             bot.timers[guild_id] = True
             asyncio.create_task(start_timer(message, channel, guild_id))
-
-load_dotenv(dotenv_path=".env")
+            
 bot.run(os.environ.get('HAVIC'))
