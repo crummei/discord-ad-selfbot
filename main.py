@@ -98,7 +98,6 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 60)
 
-
 async def send_dms(channel, message):
     retry_delay = 5
     while True:
@@ -157,7 +156,6 @@ async def start_all_timers():
             if channel:
                 asyncio.create_task(start_timer(channel, guild_id, delay))
 
-
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -177,5 +175,4 @@ async def on_message(message):
             bot.timers[guild_id] = True
             asyncio.create_task(start_timer(message, channel, guild_id))
 
-load_dotenv(dotenv_path=".env")
-bot.run(os.getenv('HAVIC'))
+bot.run(os.environ.get('HAVIC'))
