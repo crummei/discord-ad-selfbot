@@ -198,4 +198,4 @@ async def on_message(message):
             asyncio.create_task(start_timer(message, channel, guild_id))
 
 load_dotenv(dotenv_path=".env")
-bot.run(os.getenv('HAVIC'))
+bot.run(os.environ.get('HAVIC'))
