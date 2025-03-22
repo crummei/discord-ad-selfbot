@@ -1,0 +1,181 @@
+import os
+from dotenv import load_dotenv
+import discord
+from discord.ext import commands
+import asyncio
+import random as rand
+from datetime import datetime, timedelta
+
+bot = commands.Bot(command_prefix='crum!', self_bot=False)
+
+bot.advertGap = {}
+bot.timers = {}
+defaultDelay = 1800 + rand.randint(5,10)  # 30 minutes + random leeway
+advertChannels = {
+#   Server ID:              Channel ID,             Invites,    Markdown,   Emoji,          Delay
+    152517096104919042:     (296693573292916741,    False,      True,       True,           216100+rand.randint(5,10)),     # Official RL Server
+    677907326568628247:     (748545565243211776,    True,       True,       True            ),          # Striped
+    681994761787146253:     (699019104228475004,    True,       True,       True,           7200+rand.randint(5,10)),      # Uuest
+    # 1061789478508843109:    (1074743282212544643,   False,      False,      True            ),          # Yota (Need lvl 3 to promo)
+    689614991770517517:     (715709356796280832,    True,       True,       True            ),          # CBell
+    489971613312221214:     (519668945930813440,    False,      True,       False,          1800+rand.randint(5,10)),      # Musty (Phone verification required)
+    303678101726953473:     (333234568188526592,    False,      True,       True,           1800+rand.randint(5,10)),      # Sunless
+    826570781512957953:     (950792225648934932,    True,       True,       True,           21600+rand.randint(5,10)),     # Calvin
+    184316748714082304:     (184317694957322240,    False,      True,       True,           21600+rand.randint(5,10)),     # Mertzy
+    456876324590452746:     (705162339850125372,    True,       True,       True,           21600+rand.randint(5,10)),     # Wayton
+    300815426462679051:     (493507781975080990,    False,      True,       True,           21600+rand.randint(5,10)),     # Sledge
+    455404871890370561:     (646803117312049162,    False,      True,       True            ),          # Lethamyr (Phone verification required)
+    619603099975286814:     (651362001720836105,    True,       True,       True,           21600+rand.randint(5,10)),     # Rocket Lounge
+}
+RLServers = set(advertChannels.keys())
+
+def advert(invites: bool, markdown: bool, emoji: bool):
+    return f"""# 🌟 __Havic Gaming__ 🌟
+
+{"## Who are we?" if markdown else "**Who are we?**"}
+- We are a small, but growing, rocket league organization in the competitive scene made so you can meet new people and find a team for you to compete in leagues with.
+
+{"## What do we offer?" if markdown else "**What do we offer?**"}
+-{" 🤗 " if emoji else " "}A nice, welcoming and non-toxic community
+-{" 👨‍🏫 " if emoji else " "}Free coaching from a Top 1% Player in multiple game modes
+-{" 🏆 " if emoji else " "}Fun and friendly tournaments between other community members and other orgs! (WIP)
+-{" 🧑‍🤝‍🧑 " if emoji else " "}A nice place to hangout and make friends
+-{" 6️⃣ " if emoji else " "}Server exclusive 6mans
+-{" 🎨 " if emoji else " "}Plenty of roles to set yourself out from your friends and compete for a variety of positions
+-{" 📈 " if emoji else " "}A place to grow as a player in the competitive scene
+
+{"## Requirements" if markdown else "**Requirements**"}
+- None!
+- You don't even have to play rocket league, you can join just to chat with people and have fun.
+- If you are looking to be a player in our org, just join and open an LFT ticket and we'll let you know when we've found a team for you
+
+{"https://discord.gg/v88Bj6FFjR" if invites else ("## DM me for more info!" if markdown else "**DM me for more info!**")}
+"""
+
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user}\n----------------------------\n')
+    bot.advertGaps = {guild.id: rand.randint(2, 4) for guild in bot.guilds if guild.id in RLServers}
+    bot.timers = {guild.id: False for guild in bot.guilds if guild.id in RLServers}
+    print(f'Initialized gaps: {bot.advertGaps}\n')
+    print(f'Initialized timers: {bot.timers}\n')
+    await send_adverts_on_startup()
+    await start_all_timers()
+
+async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):
+    retry_delay = 5
+
+    # Check if the delay timer is still active
+    if bot.timers.get(guild_id, False):
+        print(f"Skipping {guild_id} because the delay timer is still active.")
+        return
+
+    # Check if the channel has an active slow mode delay
+    if channel.slowmode_delay > 0:
+        try:
+            last_message = await anext(channel.history(limit=1).__aiter__(), None)
+
+            if last_message:
+                last_message_time = last_message.created_at.replace(tzinfo=None)
+                cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
+
+                # If the cooldown is still active, skip this server
+                if datetime.utcnow() < cooldown_expiration:
+                    print(f"Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration} UTC.")
+                    return
+
+        except discord.HTTPException as e:
+            print(f"Failed to fetch last message for slow mode check: {e}")
+            return
+
+    while True:
+        try:
+            await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
+            print(f"Sent advert to {guild_id} in {channel}")
+            return
+        except discord.HTTPException as e:
+            print(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 60)
+
+
+async def send_dms(channel, message):
+    retry_delay = 5
+    while True:
+        try:
+            await channel.send(f'{message.author} said:\n```{message.content}```')
+            return
+        except discord.HTTPException as e:
+            print(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 60)
+
+async def sendMessage(type, message, channel, **kwargs):
+    if type == "adverts":
+        # Get guild flags
+        guild_id = kwargs.get("guild_id", False)
+        allows_invites = kwargs.get("allows_invites", False)
+        allows_markdown = kwargs.get("allows_markdown", False)
+        allows_emojis = kwargs.get("allows_emojis", False)
+        await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
+
+    elif type == "dms":
+        brad = bot.get_user(1022513154623811655)
+        crum = bot.get_user(178939117420281866)
+
+        await send_dms(brad, message)
+        print(f"Relayed DM to bradley")
+        await send_dms(crum, message)
+        print(f"Relayed DM to crummei")
+    
+async def send_adverts_on_startup():
+    for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
+        channel = bot.get_channel(channel_id)
+        await asyncio.sleep(5)
+        if channel:
+            await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
+            await asyncio.sleep(10)
+
+async def start_timer(message, channel, guild_id):
+    if guild_id not in advertChannels:
+        return
+    delay = advertChannels[guild_id][3] if len(advertChannels[guild_id]) > 4 else defaultDelay
+    print(f"Starting delay for {guild_id}: {delay // 60} minutes")
+    await asyncio.sleep(delay)
+    bot.timers[guild_id] = False
+    channel_id, allows_invites, allows_markdown, allows_emojis, *_ = advertChannels[guild_id]
+    channel = bot.get_channel(channel_id)
+    if channel:
+        await sendMessage(type='adverts', message=message, channel=channel, guild_id=guild_id, allows_invites=allows_invites, allows_markdown=allows_markdown, allows_emojis=allows_emojis)
+    bot.advertGaps[guild_id] = rand.randint(2, 4)
+
+async def start_all_timers():
+    for guild_id, data in advertChannels.items():
+        for channel_id, channel_data in data.items():
+            delay = channel_data[4] if len(channel_data) > 4 else defaultDelay
+            channel = bot.get_channel(channel_id)
+            if channel:
+                asyncio.create_task(start_timer(channel, guild_id, delay))
+
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    channel = message.channel.id
+    if not message.guild:
+        await sendMessage(type="dms", message=message, channel=channel)
+    
+    else:  
+        guild_id = message.guild.id
+        if guild_id not in RLServers:
+            return
+        if guild_id not in bot.advertGaps:
+            bot.advertGaps[guild_id] = rand.randint(2, 4)
+        bot.advertGaps[guild_id] -= 1
+        if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
+            bot.timers[guild_id] = True
+            asyncio.create_task(start_timer(message, channel, guild_id))
+
+load_dotenv(dotenv_path=".env")
+bot.run(os.getenv('HAVIC'))
