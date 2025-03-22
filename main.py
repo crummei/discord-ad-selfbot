@@ -107,7 +107,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
                 if datetime.now(timezone.utc) < cooldown_expiration:
                     # Convert UTC to CET/CEST for display
                     cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-                    logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')} (CET/CEST).")
+                    logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
                     bot.timers[guild_id] = False  # Reset the timer if skipping
                     return
 
