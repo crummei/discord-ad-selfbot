@@ -6,9 +6,10 @@ import random as rand
 from datetime import datetime, timedelta, timezone
 import pytz
 cet = pytz.timezone("Europe/Copenhagen")
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 from flask import Flask
 import threading
-
 app = Flask(__name__)
 
 @app.route("/")
@@ -69,12 +70,12 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user}\n----------------------------\n')
+    logging.info(f'Logged in as {bot.user}\n----------------------------\n')
     # Ensure both attributes are initialized as empty if there are no connected guilds
     bot.advertGaps = {guild.id: rand.randint(2, 4) for guild in bot.guilds if guild.id in RLServers}
     bot.timers = {guild.id: False for guild in bot.guilds if guild.id in RLServers}
-    print(f'Initialized gaps: {bot.advertGaps}\n')
-    print(f'Initialized timers: {bot.timers}\n')
+    logging.info(f'Initialized gaps: {bot.advertGaps}\n')
+    logging.info(f'Initialized timers: {bot.timers}\n')
     await send_adverts_on_startup()
     await start_all_timers()
 
@@ -84,7 +85,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 
     # Check if the delay timer is still active
     if bot.timers.get(guild_id, False):
-        print(f"Skipping {guild_id} because the delay timer is still active.")
+        logging.info(f"Skipping {guild_id} because the delay timer is still active.")
         return
 
     # Check if the channel has an active slow mode delay
@@ -100,23 +101,23 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
                 if datetime.now(timezone.utc) < cooldown_expiration:
                     # Convert UTC to CET/CEST for display
                     cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-                    print(f"Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')} (CET/CEST).")
+                    logging.info(f"Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')} (CET/CEST).")
                     bot.timers[guild_id] = False  # Reset the timer if skipping
                     return
 
 
 
         except discord.HTTPException as e:
-            print(f"Failed to fetch last message for slow mode check: {e}")
+            logging.info(f"Failed to fetch last message for slow mode check: {e}")
             return
 
     while True:
         try:
             await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-            print(f"Sent advert to {guild_id} in {channel}")
+            logging.info(f"Sent advert to {guild_id} in {channel}")
             return
         except discord.HTTPException as e:
-            print(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
+            logging.info(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 60)
 
@@ -128,7 +129,7 @@ async def send_dms(channel, message):
             await channel.send(f'{message.author} said:\n```{message.content}```')
             return
         except discord.HTTPException as e:
-            print(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
+            logging.info(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 60)
 
@@ -146,9 +147,9 @@ async def sendMessage(type, message, channel, **kwargs):
         crum = bot.get_user(178939117420281866)
 
         await send_dms(brad, message)
-        print(f"Relayed DM to bradley")
+        logging.info(f"Relayed DM to bradley")
         await send_dms(crum, message)
-        print(f"Relayed DM to crummei")
+        logging.info(f"Relayed DM to crummei")
     
 async def send_adverts_on_startup():
     for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
@@ -168,7 +169,7 @@ async def start_timer(message, channel, guild_id):
     else:
         delay = advertChannels[guild_id][4] if len(advertChannels[guild_id]) > 4 else defaultDelay
 
-    print(f"Starting delay for {guild_id}: {delay // 60} minutes")
+    logging.info(f"Starting delay for {guild_id}: {delay // 60} minutes")
     await asyncio.sleep(delay)
     bot.timers[guild_id] = False
     channel_id, allows_invites, allows_markdown, allows_emojis, *_ = advertChannels[guild_id]
