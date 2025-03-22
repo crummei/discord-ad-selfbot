@@ -1,13 +1,16 @@
 import os
+from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 import asyncio
 import random as rand
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import pytz
+cet = pytz.timezone("Europe/Copenhagen")
 
 bot = commands.Bot(command_prefix='crum!', self_bot=False)
 
-bot.advertGap = {}
+bot.advertGaps = {}
 bot.timers = {}
 defaultDelay = 1800 + rand.randint(5,10)  # 30 minutes + random leeway
 advertChannels = {
@@ -54,12 +57,14 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}\n----------------------------\n')
+    # Ensure both attributes are initialized as empty if there are no connected guilds
     bot.advertGaps = {guild.id: rand.randint(2, 4) for guild in bot.guilds if guild.id in RLServers}
     bot.timers = {guild.id: False for guild in bot.guilds if guild.id in RLServers}
     print(f'Initialized gaps: {bot.advertGaps}\n')
     print(f'Initialized timers: {bot.timers}\n')
     await send_adverts_on_startup()
     await start_all_timers()
+
 
 async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):
     retry_delay = 5
@@ -75,13 +80,18 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
             last_message = await anext(channel.history(limit=1).__aiter__(), None)
 
             if last_message:
-                last_message_time = last_message.created_at.replace(tzinfo=None)
+                last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)  # Localize to UTC
                 cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
 
                 # If the cooldown is still active, skip this server
-                if datetime.utcnow() < cooldown_expiration:
-                    print(f"Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration} UTC.")
+                if datetime.now(timezone.utc) < cooldown_expiration:
+                    # Convert UTC to CET/CEST for display
+                    cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
+                    print(f"Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')} (CET/CEST).")
+                    bot.timers[guild_id] = False  # Reset the timer if skipping
                     return
+
+
 
         except discord.HTTPException as e:
             print(f"Failed to fetch last message for slow mode check: {e}")
@@ -96,6 +106,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
             print(f"Rate limit hit! Retrying in {retry_delay} sec... {e}")
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 60)
+
 
 async def send_dms(channel, message):
     retry_delay = 5
@@ -135,25 +146,37 @@ async def send_adverts_on_startup():
             await asyncio.sleep(10)
 
 async def start_timer(message, channel, guild_id):
+    global defaultDelay
     if guild_id not in advertChannels:
         return
-    delay = advertChannels[guild_id][3] if len(advertChannels[guild_id]) > 4 else defaultDelay
+    
+    if isinstance(message, int):
+        delay = message
+    else:
+        delay = advertChannels[guild_id][4] if len(advertChannels[guild_id]) > 4 else defaultDelay
+
     print(f"Starting delay for {guild_id}: {delay // 60} minutes")
     await asyncio.sleep(delay)
     bot.timers[guild_id] = False
     channel_id, allows_invites, allows_markdown, allows_emojis, *_ = advertChannels[guild_id]
     channel = bot.get_channel(channel_id)
+    
     if channel:
-        await sendMessage(type='adverts', message=message, channel=channel, guild_id=guild_id, allows_invites=allows_invites, allows_markdown=allows_markdown, allows_emojis=allows_emojis)
+        await sendMessage(type='adverts', message=message, channel=channel, 
+                          guild_id=guild_id, allows_invites=allows_invites, 
+                          allows_markdown=allows_markdown, allows_emojis=allows_emojis)
     bot.advertGaps[guild_id] = rand.randint(2, 4)
 
 async def start_all_timers():
-    for guild_id, data in advertChannels.items():
-        for channel_id, channel_data in data.items():
-            delay = channel_data[4] if len(channel_data) > 4 else defaultDelay
-            channel = bot.get_channel(channel_id)
-            if channel:
-                asyncio.create_task(start_timer(channel, guild_id, delay))
+    global defaultDelay
+    for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
+        delay = advertChannels[guild_id][4] if len(advertChannels[guild_id]) > 4 else defaultDelay
+        channel = bot.get_channel(channel_id)
+        if not bot.timers.get(guild_id, False) and channel:
+            bot.timers[guild_id] = True
+            asyncio.create_task(start_timer(None, channel, guild_id))
+
+
 
 @bot.event
 async def on_message(message):
@@ -174,4 +197,5 @@ async def on_message(message):
             bot.timers[guild_id] = True
             asyncio.create_task(start_timer(message, channel, guild_id))
 
-bot.run(os.environ.get('HAVIC'))
+load_dotenv(dotenv_path=".env")
+bot.run(os.getenv('HAVIC'))
