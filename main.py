@@ -94,39 +94,45 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
         logging.info(f"{RED}Skipping {guild_id} because the delay timer is still active.{RESET}")
         return
 
-    # Check if the channel has an active slow mode delay
+    # Delete the last 3 messages sent by the bot in the channel
+    try:
+        async for msg in channel.history(limit=10):
+            if msg.author == bot.user:
+                await msg.delete()
+                if len([m async for m in channel.history(limit=3) if m.author == bot.user]) == 0:
+                    break
+        logging.info(f"{GREEN}Deleted the last 3 messages sent by the bot in {guild_id}.{RESET}")
+    except discord.HTTPException as e:
+        logging.info(f"{RED}Failed to delete previous messages: {e}{RESET}")
+
+    # Check for slow mode
     if channel.slowmode_delay > 0:
         try:
             last_message = await anext(channel.history(limit=1).__aiter__(), None)
 
             if last_message:
-                last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)  # Localize to UTC
+                last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
                 cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
 
-                # If the cooldown is still active, skip this server
                 if datetime.now(timezone.utc) < cooldown_expiration:
-                    # Convert UTC to CET/CEST for display
                     cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-                    logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
-                    bot.timers[guild_id] = False  # Reset the timer if skipping
+                    logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
+                    bot.timers[guild_id] = False
                     return
-
-
-
         except discord.HTTPException as e:
             logging.info(f"{RED}Failed to fetch last message for slow mode check:{RESET} {e}")
             return
-
+            
+    # Send the advert message
     while True:
         try:
             await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-            logging.info(f"{GREEN}Sent advert to{RESET} {guild_id}{GREEN} in{RESET} {channel}")
+            logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
             return
         except discord.HTTPException as e:
-            logging.info(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec... {RESET}{e}")
+            logging.info(f"{RED}Rate limit hit! Retrying in {retry_delay} sec... {RESET}{e}")
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 60)
-
 
 async def send_dms(channel, message):
     retry_delay = 5
