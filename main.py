@@ -94,17 +94,6 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
         logging.info(f"{RED}Skipping {guild_id} because the delay timer is still active.{RESET}")
         return
 
-    # Delete the last 3 messages sent by the bot in the channel
-    try:
-        async for msg in channel.history(limit=10):
-            if msg.author == bot.user:
-                await msg.delete()
-                if len([m async for m in channel.history(limit=3) if m.author == bot.user]) == 0:
-                    break
-        logging.info(f"{GREEN}Deleted the last 3 messages sent by the bot in {guild_id}.{RESET}")
-    except discord.HTTPException as e:
-        logging.info(f"{RED}Failed to delete previous messages: {e}{RESET}")
-
     # Check for slow mode
     if channel.slowmode_delay > 0:
         try:
@@ -122,6 +111,17 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
         except discord.HTTPException as e:
             logging.info(f"{RED}Failed to fetch last message for slow mode check:{RESET} {e}")
             return
+    else:
+        # Delete the last 3 messages sent by the bot in the channel
+        try:
+            async for msg in channel.history(limit=10):
+                if msg.author == bot.user:
+                    await msg.delete()
+                    if len([m async for m in channel.history(limit=3) if m.author == bot.user]) == 0:
+                        break
+            logging.info(f"{GREEN}Deleted the last 3 messages sent by the bot in {guild_id}.{RESET}")
+        except discord.HTTPException as e:
+            logging.info(f"{RED}Failed to delete previous messages: {e}{RESET}")
             
     # Send the advert message
     while True:
