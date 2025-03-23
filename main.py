@@ -130,9 +130,13 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
             logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
             return
         except discord.HTTPException as e:
-            logging.info(f"{RED}Rate limit hit! Retrying in {retry_delay} sec... {RESET}{e}")
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, 60)
+            if e.status == 429:  # HTTP 429 is "Too Many Requests"
+                retry_after = int(e.response.headers.get("Retry-After", 5))  # Wait the specified time or a default of 5s
+                logging.warning(f"{RED}Rate limit hit! Retrying after {retry_after} seconds...{RESET}")
+                await asyncio.sleep(retry_after)
+            else:
+                logging.error(f"{RED}HTTP Error: {e}{RESET}")
+
 
 async def send_dms(channel, message):
     retry_delay = 5
