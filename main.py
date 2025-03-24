@@ -20,7 +20,7 @@ def run_flask():
     app.run(host="0.0.0.0", port=5000)
 
 thread = threading.Thread(target=run_flask)
-thread.start()
+thread.start() 
 
 RED = "\033[31m"
 GREEN = "\033[32m"
@@ -126,20 +126,24 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
             logging.info(f"{GREEN}Deleted the last 3 messages sent by the bot in {guild_id}.{RESET}")
         except discord.HTTPException as e:
             logging.info(f"{RED}Failed to delete previous messages: {e}{RESET}")
-            
+
     # Send the advert message
     while True:
         try:
             await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
             logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
             return
+        except discord.Forbidden:  # Missing permissions (HTTP 403)
+            logging.error(f"{RED}Missing Permissions in guild {guild_id}, skipping to the next server.{RESET}")
+            return
         except discord.HTTPException as e:
-            if e.status == 429:  # HTTP 429 is "Too Many Requests"
-                retry_after = int(e.response.headers.get("Retry-After", 5))  # Wait the specified time or a default of 5s
+            if e.status == 429:  # Rate limit hit
+                retry_after = int(e.response.headers.get("Retry-After", 5))
                 logging.warning(f"{RED}Rate limit hit! Retrying after {retry_after} seconds...{RESET}")
                 await asyncio.sleep(retry_after)
             else:
                 logging.error(f"{RED}HTTP Error: {e}{RESET}")
+
 
 
 async def send_dms(channel, message):
