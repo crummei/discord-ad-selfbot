@@ -32,22 +32,26 @@ bot = commands.Bot(command_prefix='crum!', self_bot=False)
 
 bot.advertGaps = {}
 bot.timers = {}
-defaultDelay = 1800 + rand.randint(5,10)  # 30 minutes + random leeway
+halfHour = 1800
+twoHours = 7200
+sixHours = 21600
+noSlowmode = halfHour
+
 advertChannels = {
 #   Server ID:              Channel ID,             Invites,    Markdown,   Emoji,          Delay
-    152517096104919042:     (296693573292916741,    False,      True,       True,           216100+rand.randint(5,10)),     # Official RL Server
-    677907326568628247:     (748545565243211776,    True,       True,       True            ),          # Striped
-    681994761787146253:     (699019104228475004,    True,       True,       True,           7200+rand.randint(5,10)),      # Uuest
-    1061789478508843109:    (1074743282212544643,   False,      False,      True            ),          # Yota (Need lvl 3 to promo)
-    689614991770517517:     (715709356796280832,    True,       True,       True            ),          # CBell
-    489971613312221214:     (519668945930813440,    False,      True,       False,          1800+rand.randint(5,10)),      # Musty (Phone verification required)
-    303678101726953473:     (333234568188526592,    False,      True,       True,           1800+rand.randint(5,10)),      # Sunless
-    826570781512957953:     (950792225648934932,    True,       True,       True,           21600+rand.randint(5,10)),     # Calvin
-    184316748714082304:     (184317694957322240,    False,      True,       False,          21600+rand.randint(5,10)),     # Mertzy
-    456876324590452746:     (705162339850125372,    True,       True,       True,           21600+rand.randint(5,10)),     # Wayton
-    300815426462679051:     (493507781975080990,    False,      True,       True,           21600+rand.randint(5,10)),     # Sledge
-    455404871890370561:     (646803117312049162,    False,      True,       True            ),          # Lethamyr (Phone verification required)
-    619603099975286814:     (651362001720836105,    True,       True,       True,           21600+rand.randint(5,10)),     # Rocket Lounge
+    152517096104919042:     (296693573292916741,    False,      True,       True,           sixHours	+ rand.randint(5,10)),		# Official RL Server
+    677907326568628247:     (748545565243211776,    True,       True,       True            noSlowmode	+ rand.randint(5,10)),		# Striped
+    681994761787146253:     (699019104228475004,    True,       True,       True,           twoHours	+ rand.randint(5,10)),      # Uuest
+    1061789478508843109:    (1074743282212544643,   False,      False,      True            noSlowmode	+ rand.randint(5,10)),     	# Yota (Need lvl 3 to promo)
+    689614991770517517:     (715709356796280832,    True,       True,       True            noSlowmode	+ rand.randint(5,10)),      # CBell
+    489971613312221214:     (519668945930813440,    False,      True,       False,          halfHour	+ rand.randint(5,10)),      # Musty (Phone verification required)
+    303678101726953473:     (333234568188526592,    False,      True,       True,           halfHour	+ rand.randint(5,10)),      # Sunless
+    826570781512957953:     (950792225648934932,    True,       True,       True,           sixHours	+ rand.randint(5,10)),     	# Calvin
+    184316748714082304:     (184317694957322240,    False,      True,       False,          sixHours	+ rand.randint(5,10)),    	# Mertzy
+    456876324590452746:     (705162339850125372,    True,       True,       True,           sixHours	+ rand.randint(5,10)),     	# Wayton
+    300815426462679051:     (493507781975080990,    False,      True,       True,           sixHours	+ rand.randint(5,10)),    	# Sledge
+    455404871890370561:     (646803117312049162,    False,      True,       True            noSlowmode	+ rand.randint(5,10)),      # Lethamyr (Phone verification required)
+    619603099975286814:     (651362001720836105,    True,       True,       True,           sixHours	+ rand.randint(5,10)),     	# Rocket Lounge
 }
 RLServers = set(advertChannels.keys())
 
@@ -59,7 +63,7 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 
 {"## What do we offer?" if markdown else "**What do we offer?**"}
 -{" 🤗 " if emoji else " "}A nice, welcoming and non-toxic community
--{" 👨‍🏫 " if emoji else " "}Free coaching from a Top 1% Player in multiple game modes
+-{" 👨‍🏫 " if emoji else " "}Chance for free coaching from a Top 1% Player in multiple game modes
 -{" 🏆 " if emoji else " "}Fun and friendly tournaments between other community members and other orgs! (WIP)
 -{" 🧑‍🤝‍🧑 " if emoji else " "}A nice place to hangout and make friends
 -{" 6️⃣ " if emoji else " "}Server exclusive 6mans
@@ -176,14 +180,13 @@ async def send_adverts_on_startup():
             await asyncio.sleep(10)
 
 async def start_timer(message, channel, guild_id):
-    global defaultDelay
     if guild_id not in advertChannels:
         return
     
     if isinstance(message, int):
         delay = message
     else:
-        delay = advertChannels[guild_id][4] if len(advertChannels[guild_id]) > 4 else defaultDelay
+        delay = advertChannels[guild_id][4]
 
     logging.info(
     f"{YELLOW}Starting delay for{RESET} {guild_id}{YELLOW}:{RESET} "
@@ -202,9 +205,8 @@ async def start_timer(message, channel, guild_id):
     bot.advertGaps[guild_id] = rand.randint(2, 4)
 
 async def start_all_timers():
-    global defaultDelay
     for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
-        delay = advertChannels[guild_id][4] if len(advertChannels[guild_id]) > 4 else defaultDelay
+        delay = advertChannels[guild_id][4]
         channel = bot.get_channel(channel_id)
         if not bot.timers.get(guild_id, False) and channel:
             bot.timers[guild_id] = True
