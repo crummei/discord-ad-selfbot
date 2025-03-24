@@ -43,7 +43,7 @@ advertChannels = {
     489971613312221214:     (519668945930813440,    False,      True,       False,          1800+rand.randint(5,10)),      # Musty (Phone verification required)
     303678101726953473:     (333234568188526592,    False,      True,       True,           1800+rand.randint(5,10)),      # Sunless
     826570781512957953:     (950792225648934932,    True,       True,       True,           21600+rand.randint(5,10)),     # Calvin
-    184316748714082304:     (184317694957322240,    False,      True,       True,           21600+rand.randint(5,10)),     # Mertzy
+    184316748714082304:     (184317694957322240,    False,      True,       False,          21600+rand.randint(5,10)),     # Mertzy
     456876324590452746:     (705162339850125372,    True,       True,       True,           21600+rand.randint(5,10)),     # Wayton
     300815426462679051:     (493507781975080990,    False,      True,       True,           21600+rand.randint(5,10)),     # Sledge
     455404871890370561:     (646803117312049162,    False,      True,       True            ),          # Lethamyr (Phone verification required)
