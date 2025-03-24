@@ -42,7 +42,7 @@ advertChannels = {
     152517096104919042:		(296693573292916741,	False,		True,		True,		sixHours	+ rand.randint(5,10)),		# Official RL Server
     677907326568628247:		(748545565243211776,	True,		True,		True,		noSlowmode	+ rand.randint(5,10)),		# Striped
     681994761787146253:		(699019104228475004,	True,		True,		True,		twoHours	+ rand.randint(5,10)),		# Uuest
-#    1061789478508843109:	(1074743282212544643,	False,		False,		True,		noSlowmode	+ rand.randint(5,10)),		# Yota (Need lvl 3 to promo)
+#    1061789478508843109:	(1074743282212544643,	False,		False,		True,		noSlowmode	+ rand.randint(5,10)),		# Yota (Need lvl 3 to promo) (Server promo not allowed)
     689614991770517517:		(715709356796280832,	True,		True,		True,		noSlowmode	+ rand.randint(5,10)),		# CBell
     489971613312221214:		(519668945930813440,	False,		True,		False,		halfHour	+ rand.randint(5,10)),		# Musty (Phone verification required)
     303678101726953473:		(333234568188526592,	False,		True,		True,		halfHour	+ rand.randint(5,10)),		# Sunless
