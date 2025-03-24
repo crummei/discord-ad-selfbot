@@ -118,14 +118,18 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
     else:
         # Delete the last 3 messages sent by the bot in the channel
         try:
-            async for msg in channel.history(limit=10):
-                if msg.author == bot.user:
-                    await msg.delete()
-                    if len([m async for m in channel.history(limit=3) if m.author == bot.user]) == 0:
-                        break
-            logging.info(f"{GREEN}Deleted the last 3 messages sent by the bot in {guild_id}.{RESET}")
+            bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user][:3]
+            if len(bot_messages) < 3:
+                logging.info(f"{GREEN}Less than 3 messages from the bot found, deleting all found messages in {RESET}{guild_id}{GREEN}.{RESET}")
+                
+            for msg in bot_messages:
+                await msg.delete()
+                
+            logging.info(f"{GREEN}Deleted the last {RESET}{len(bot_messages)}{GREEN} messages sent by the bot in {RESET}{guild_id}{GREEN}.{RESET}")
+            
         except discord.HTTPException as e:
-            logging.info(f"{RED}Failed to delete previous messages: {e}{RESET}")
+            logging.info(f"{RED}Failed to delete previous messages in {RESET}{guild_id}{GREEN}:{RESET} {e}")
+
 
     # Send the advert message
     while True:
