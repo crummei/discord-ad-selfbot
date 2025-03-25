@@ -184,8 +184,8 @@ async def send_adverts_on_startup():
 		channel = bot.get_channel(channel_id)
 		await asyncio.sleep(5)
 		if channel:
-		await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
-		await asyncio.sleep(10)
+			await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
+			await asyncio.sleep(10)
 
 async def start_timer(message, channel, guild_id):
 	if guild_id not in advertChannels:
