@@ -32,26 +32,26 @@ bot = commands.Bot(command_prefix='crum!', self_bot=False)
 
 bot.advertGaps = {}
 bot.timers = {}
-halfHour = 1800
-twoHours = 7200
-sixHours = 21600
+halfHour = 1800 + rand.randint(10,30))
+twoHours = 7200 + rand.randint(10,30))
+sixHours = 21600 + rand.randint(10,30))
 noSlowmode = halfHour
 
 advertChannels = {
 #   Server ID:              Channel ID,             Invites,    Markdown,   Emoji,   	Delay
-    152517096104919042:		(296693573292916741,	False,		True,		True,		sixHours	+ rand.randint(5,10)),		# Official RL Server
-    677907326568628247:		(748545565243211776,	True,		True,		True,		noSlowmode	+ rand.randint(5,10)),		# Striped
-    681994761787146253:		(699019104228475004,	True,		True,		True,		twoHours	+ rand.randint(5,10)),		# Uuest
-#    1061789478508843109:	(1074743282212544643,	False,		False,		True,		noSlowmode	+ rand.randint(5,10)),		# Yota (Need lvl 3 to promo) (Server promo not allowed)
-    689614991770517517:		(715709356796280832,	True,		True,		True,		noSlowmode	+ rand.randint(5,10)),		# CBell
-    489971613312221214:		(519668945930813440,	False,		True,		False,		halfHour	+ rand.randint(5,10)),		# Musty (Phone verification required)
-    303678101726953473:		(333234568188526592,	False,		True,		True,		halfHour	+ rand.randint(5,10)),		# Sunless
-    826570781512957953:		(950792225648934932,	True,		True,		True,		sixHours	+ rand.randint(5,10)),		# Calvin
-    184316748714082304:		(184317694957322240,	False,		True,		False,		sixHours	+ rand.randint(5,10)),		# Mertzy
-    456876324590452746:		(705162339850125372,	True,		True,		True,		sixHours	+ rand.randint(5,10)),		# Wayton
-    300815426462679051:		(493507781975080990,	False,		True,		True,		sixHours	+ rand.randint(5,10)),		# Sledge
-    455404871890370561:		(646803117312049162,	False,		True,		True,		noSlowmode	+ rand.randint(5,10)),		# Lethamyr (Phone verification required)
-    619603099975286814:		(651362001720836105,	True,		True,		True,		sixHours	+ rand.randint(5,10)),		# Rocket Lounge
+    152517096104919042:		(296693573292916741,	False,		True,		True,		sixHours,		# Official RL Server
+    677907326568628247:		(748545565243211776,	True,		True,		True,		twoHours,		# Striped
+    681994761787146253:		(699019104228475004,	True,		True,		True,		noSlowmode,		# Uuest
+#    1061789478508843109:	(1074743282212544643,	False,		False,		True,		noSlowmode,		# Yota (Need lvl 3 to promo) (Server promo not allowed)
+    689614991770517517:		(715709356796280832,	True,		True,		True,		sixHours,		# CBell
+    489971613312221214:		(519668945930813440,	False,		True,		False,		halfHour,		# Musty (Phone verification required)
+    303678101726953473:		(333234568188526592,	False,		True,		True,		halfHour,		# Sunless
+    826570781512957953:		(950792225648934932,	True,		True,		True,		sixHours,		# Calvin
+    184316748714082304:		(184317694957322240,	False,		True,		False,		sixHours,		# Mertzy
+    456876324590452746:		(705162339850125372,	True,		True,		True,		sixHours,		# Wayton
+    300815426462679051:		(493507781975080990,	False,		True,		True,		sixHours,		# Sledge
+    455404871890370561:		(646803117312049162,	False,		True,		True,		noSlowmode,		# Lethamyr (Phone verification required)
+    619603099975286814:		(651362001720836105,	True,		True,		True,		sixHours,		# Rocket Lounge
 }
 RLServers = set(advertChannels.keys())
 
