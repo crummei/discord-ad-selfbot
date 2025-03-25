@@ -32,9 +32,9 @@ bot = commands.Bot(command_prefix='crum!', self_bot=False)
 
 bot.advertGaps = {}
 bot.timers = {}
-halfHour = 1800 + rand.randint(10,30))
-twoHours = 7200 + rand.randint(10,30))
-sixHours = 21600 + rand.randint(10,30))
+halfHour = 1800
+twoHours = 7200
+sixHours = 21600
 noSlowmode = halfHour
 
 advertChannels = {
@@ -194,13 +194,20 @@ async def start_timer(message, channel, guild_id):
     if isinstance(message, int):
         delay = message
     else:
-        delay = advertChannels[guild_id][4]
-
+		delay = (
+	    advertChannels[guild_id][4] + (
+		rand.randint(10, 120) if advertChannels[guild_id][4] in {halfHour, noSlowmode} else
+		rand.randint(60, 300) if advertChannels[guild_id][4] == twoHours else
+		rand.randint(180, 900) if advertChannels[guild_id][4] == sixHours else
+		(logging.info("Failed to retrieve delay or delay not valid. Defaulting to highest value.") or rand.randint(180, 900))
+	    	)
+		)
     logging.info(
     f"{YELLOW}Starting delay for{RESET} {guild_id}{YELLOW}:{RESET} "
     f"{(delay // 60) if delay // 60 < 60 else (delay // 3600)}"
     f"{YELLOW} {'minutes' if delay // 60 < 60 else 'hours'}{RESET}"
     )
+	
     await asyncio.sleep(delay)
     bot.timers[guild_id] = False
     channel_id, allows_invites, allows_markdown, allows_emojis, *_ = advertChannels[guild_id]
@@ -214,7 +221,13 @@ async def start_timer(message, channel, guild_id):
 
 async def start_all_timers():
     for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
-        delay = advertChannels[guild_id][4]
+        delay = (advertChannels[guild_id][4] + (
+		rand.randint(10, 120) if advertChannels[guild_id][4] in {halfHour, noSlowmode} else
+		rand.randint(60, 300) if advertChannels[guild_id][4] == twoHours else
+		rand.randint(180, 900) if advertChannels[guild_id][4] == sixHours else
+		(logging.info("Failed to retrieve delay or delay not valid. Defaulting to highest value.") or rand.randint(180, 900))
+	    	)
+		)
         channel = bot.get_channel(channel_id)
         if not bot.timers.get(guild_id, False) and channel:
             bot.timers[guild_id] = True
