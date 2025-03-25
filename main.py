@@ -237,22 +237,22 @@ async def start_all_timers():
 
 
 @bot.event
-	async def on_message(message):
-		if message.author == bot.user:
-			return
-			channel = message.channel.id
-		if not message.guild:
-			await sendMessage(type="dms", message=message, channel=channel)
-		
-		else:
-			guild_id = message.guild.id
-		if guild_id not in RLServers:
-			return
-		if guild_id not in bot.advertGaps:
-			bot.advertGaps[guild_id] = rand.randint(2, 4)
-			bot.advertGaps[guild_id] -= 1
-		if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
-			bot.timers[guild_id] = True
-			asyncio.create_task(start_timer(message, channel, guild_id))
+async def on_message(message):
+	if message.author == bot.user:
+		return
+		channel = message.channel.id
+	if not message.guild:
+		await sendMessage(type="dms", message=message, channel=channel)
+	
+	else:
+		guild_id = message.guild.id
+	if guild_id not in RLServers:
+		return
+	if guild_id not in bot.advertGaps:
+		bot.advertGaps[guild_id] = rand.randint(2, 4)
+		bot.advertGaps[guild_id] -= 1
+	if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
+		bot.timers[guild_id] = True
+		asyncio.create_task(start_timer(message, channel, guild_id))
 	    
 bot.run(os.environ.get('HAVIC'))
