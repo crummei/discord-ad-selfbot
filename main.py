@@ -195,12 +195,12 @@ async def start_timer(message, channel, guild_id):
         delay = message
     else:
 		delay = (
-	    advertChannels[guild_id][4] + (
-		rand.randint(10, 120) if advertChannels[guild_id][4] in {halfHour, noSlowmode} else
-		rand.randint(60, 300) if advertChannels[guild_id][4] == twoHours else
-		rand.randint(180, 900) if advertChannels[guild_id][4] == sixHours else
-		(logging.info("Failed to retrieve delay or delay not valid. Defaulting to highest value.") or rand.randint(180, 900))
-	    	)
+		    advertChannels[guild_id][4] + (
+			rand.randint(10, 120) if advertChannels[guild_id][4] in {halfHour, noSlowmode} else
+			rand.randint(60, 300) if advertChannels[guild_id][4] == twoHours else
+			rand.randint(180, 900) if advertChannels[guild_id][4] == sixHours else
+			(logging.info("Failed to retrieve delay or delay not valid. Defaulting to highest value.") or rand.randint(180, 900))
+			)
 		)
     logging.info(
     f"{YELLOW}Starting delay for{RESET} {guild_id}{YELLOW}:{RESET} "
