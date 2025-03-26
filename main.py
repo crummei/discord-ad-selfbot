@@ -58,22 +58,23 @@ RLServers = set(advertChannels.keys())
 def advert(invites: bool, markdown: bool, emoji: bool):
 	return f"""# 🌟 __Havic Gaming__ 🌟
 
-{"## Who are we?" if markdown else "**Who are we?**"}
-- We are a small, but growing, rocket league organization in the competitive scene made so you can meet new people and find a team for you to compete in leagues with.
+{"## __Who are we?__" if markdown else "__**Who are we?**__"}
+‣ We are a small, but growing, rocket league organization in the competitive scene made so you can meet new people and find a team for you to compete in leagues with.
 
 {"## What do we offer?" if markdown else "**What do we offer?**"}
--{" 🤗 " if emoji else " "}A nice, welcoming and non-toxic community
--{" 👨‍🏫 " if emoji else " "}Chance for free coaching from a Top 1% Player in multiple game modes
--{" 🏆 " if emoji else " "}Fun and friendly tournaments between other community members and other orgs! (WIP)
--{" 🧑‍🤝‍🧑 " if emoji else " "}A nice place to hangout and make friends
--{" 6️⃣ " if emoji else " "}Server exclusive 6mans
--{" 🎨 " if emoji else " "}Plenty of roles to set yourself out from your friends and compete for a variety of positions
--{" 📈 " if emoji else " "}A place to grow as a player in the competitive scene
+{"> `🤗`" if emoji else ">"} ‣ A nice, welcoming and non-toxic community
+{"> `👨‍🏫`" if emoji else ">"} ‣ Chance for __**free coaching**__ from a Top 1% Player in multiple game modes
+{"> `🏆`" if emoji else ">"} ‣ Fun and friendly __**tournaments**__ between other community members and other orgs! (WIP)
+{"> `🎉`" if emoji else ">"} ‣ Occasional __**giveaways for free nitro**__ and more!
+{"> `6️⃣`" if emoji else ">"} ‣ Server exclusive __**6mans**__
+{"> `🎨`" if emoji else ">"} ‣ Plenty of roles to set yourself out from your friends and compete for a variety of positions
+{"> `📈`" if emoji else ">"} ‣ A place to grow as a player in the competitive scene
+{"> `🧑‍🤝‍🧑`" if emoji else ">"} ‣ A nice place to hangout and make friends
 
-{"## Requirements" if markdown else "**Requirements**"}
-- None!
-- You don't even have to play rocket league, you can join just to chat with people and have fun.
-- If you are looking to be a player in our org, just join and open an LFT ticket and we'll let you know when we've found a team for you
+{"## __Requirements__" if markdown else "__**Requirements**__"}
+‣ None!
+  You don't even have to play rocket league, you can join just to chat with people and have fun.
+‣ If you are looking to be a player in our org, just join and open an LFT ticket and we'll let you know when we've found a team for you
 
 {"https://discord.gg/v88Bj6FFjR" if invites else ("## DM me for more info!" if markdown else "**DM me for more info!**")}
 """
