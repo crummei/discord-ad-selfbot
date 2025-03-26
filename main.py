@@ -50,7 +50,7 @@ advertChannels = {
     184316748714082304:		(184317694957322240,	False,		True,		False,		sixHours),		# Mertzy
     456876324590452746:		(705162339850125372,	True,		True,		True,		sixHours),		# Wayton
     300815426462679051:		(493507781975080990,	False,		True,		True,		sixHours),		# Sledge
-    455404871890370561:		(646803117312049162,	False,		True,		True,		noSlowmode),		# Lethamyr (Phone verification required)
+    455404871890370561:		(646803117312049162,	False,		True,		True,		sixHours),		# Lethamyr (Phone verification required)
     619603099975286814:		(651362001720836105,	True,		True,		True,		sixHours),		# Rocket Lounge
 }
 RLServers = set(advertChannels.keys())
