@@ -241,7 +241,9 @@ async def start_all_timers():
 async def on_message(message):
 	if message.author == bot.user:
 		return
-		channel = message.channel.id
+	
+	channel = message.channel.id
+	
 	if not message.guild:
 		await sendMessage(type="dms", message=message, channel=channel)
 	
