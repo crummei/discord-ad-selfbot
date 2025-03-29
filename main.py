@@ -30,8 +30,6 @@ RESET = "\033[0m"
 
 bot = commands.Bot(command_prefix='crum!', self_bot=False)
 
-bot.advertGaps = {}
-bot.timers = {}
 halfHour = 1800
 twoHours = 7200
 sixHours = 21600
@@ -81,75 +79,62 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 
 @bot.event
 async def on_ready():
-	logging.info(f'{YELLOW}Logged in as {bot.user}{RESET}\n----------------------------\n')
-	# Ensure both attributes are initialized as empty if there are no connected guilds
-	bot.advertGaps = {guild.id: rand.randint(2, 4) for guild in bot.guilds if guild.id in RLServers}
-	bot.timers = {guild.id: False for guild in bot.guilds if guild.id in RLServers}
-	logging.info(f'{YELLOW}Initialized gaps:{RESET} {bot.advertGaps}\n')
-	logging.info(f'{YELLOW}Initialized timers:{RESET} {bot.timers}\n')
-	await send_adverts_on_startup()
-	await start_all_timers()
+    logging.info(f'{YELLOW}Logged in as {bot.user}{RESET}\n----------------------------\n')
+    bot.advertGaps = {}  # Initialize missing attributes
+    bot.timers = {}
+    bot.loop.create_task(periodic_advert_task())  # Start periodic task
+    logging.info(f'{YELLOW}Started periodic advert task{RESET}')
+
 
 
 async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):
-	retry_delay = 5
-	
-	# Check if the delay timer is still active
-	if bot.timers.get(guild_id, False):
-		logging.info(f"{RED}Skipping {guild_id} because the delay timer is still active.{RESET}")
-		return
-	
-	# Check for slow mode
+	# Only check slowmode
 	if channel.slowmode_delay > 0:
 		try:
-			last_message = await anext(channel.history(limit=1).__aiter__(), None)
-			
-			if last_message:
+			async for last_message in channel.history(limit=1):
 				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
 				cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
-			
-			if datetime.now(timezone.utc) < cooldown_expiration:
-				cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-				logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
-				bot.timers[guild_id] = False
-				return
-		except discord.HTTPException as e:
+				if datetime.now(timezone.utc) < cooldown_expiration:
+					cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
+					logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
+					return
+		except Exception as e:
 			logging.info(f"{RED}Failed to fetch last message for slow mode check:{RESET} {e}")
 			return
-	else:
-		# Delete the last 3 messages sent by the bot in the channel
-		try:
-			bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user][:3]
-			if len(bot_messages) < 3:
-				logging.info(f"{GREEN}Less than 3 messages from the bot found, deleting all found messages in {RESET}{guild_id}{GREEN}.{RESET}")
-			
-			for msg in bot_messages:
-				await msg.delete()
-				
-				logging.info(f"{GREEN}Deleted the last {RESET}{len(bot_messages)}{GREEN} messages sent by the bot in {RESET}{guild_id}{GREEN}.{RESET}")
-		
-		except discord.HTTPException as e:
-			logging.info(f"{RED}Failed to delete previous messages in {RESET}{guild_id}{GREEN}:{RESET} {e}")
-	
-	
-	# Send the advert message
+
+	# Send advert if no cooldown
 	while True:
 		try:
 			await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
 			logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
-			return
-		except discord.Forbidden:  # Missing permissions (HTTP 403)
-			logging.error(f"{RED}Missing Permissions in guild {guild_id}, skipping to the next server.{RESET}")
-			return
+			
+			# Delete the last 3 messages sent by the bot in the channel
+			try:
+				bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user][:3]
+				
+				if len(bot_messages) < 3:
+					logging.info(f"{GREEN}Less than 3 messages from the bot found, deleting all found messages in {guild_id}.{RESET}")
+
+				for msg in bot_messages:
+					await msg.delete()
+				
+				logging.info(f"{GREEN}Deleted {len(bot_messages)} messages sent by the bot in {guild_id}.{RESET}")
+
+			except discord.HTTPException as e:
+				logging.info(f"{RED}Failed to delete previous messages in {guild_id}:{RESET} {e}")
+			
+			break  # Exit retry loop
+		except discord.Forbidden:
+			logging.error(f"{RED}Missing Permissions to send in {channel.name} of {guild_id}, skipping to the next server.{RESET}")
+			break
 		except discord.HTTPException as e:
-			if e.status == 429:  # Rate limit hit
-				retry_after = int(e.response.headers.get("Retry-After", 5))
+			retry_after = getattr(e, "retry_after", int(e.response.headers.get("Retry-After", 5)))
+			if e.status == 429:
 				logging.warning(f"{RED}Rate limit hit! Retrying after {retry_after} seconds...{RESET}")
 				await asyncio.sleep(retry_after)
 			else:
 				logging.error(f"{RED}HTTP Error: {e}{RESET}")
-
-
+				break
 
 async def send_dms(channel, message):
 	retry_delay = 5
@@ -188,74 +173,47 @@ async def send_adverts_on_startup():
 			await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
 			await asyncio.sleep(10)
 
-async def start_timer(message, channel, guild_id):
-	if guild_id not in advertChannels:
-		return
-	
-	if isinstance(message, int):
-		delay = message
-	else:
-		delay = (
-			advertChannels[guild_id][4] + (
-			rand.randint(10, 120) if advertChannels[guild_id][4] in {halfHour, noSlowmode} else
-			rand.randint(60, 300) if advertChannels[guild_id][4] == twoHours else
-			rand.randint(180, 900) if advertChannels[guild_id][4] == sixHours else
-			(logging.info("Failed to retrieve delay or delay not valid. Defaulting to highest value.") or rand.randint(180, 900))
-			)
-		)
-	
-		logging.info(
-		f"{YELLOW}Starting delay for{RESET} {guild_id}{YELLOW}:{RESET} "
-		f"{(delay // 60) if delay // 60 < 60 else (delay // 3600)}"
-		f"{YELLOW} {'minutes' if delay // 60 < 60 else 'hours'}{RESET}"
-		)
-	
-		await asyncio.sleep(delay)
-		bot.timers[guild_id] = False
-		channel_id, allows_invites, allows_markdown, allows_emojis, *_ = advertChannels[guild_id]
-		channel = bot.get_channel(channel_id)
-	
-	if channel:
-		await sendMessage(type='adverts', message=message, channel=channel, 
-		guild_id=guild_id, allows_invites=allows_invites, 
-		allows_markdown=allows_markdown, allows_emojis=allows_emojis)
-		bot.advertGaps[guild_id] = rand.randint(2, 4)
+async def periodic_advert_task():
+    async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
+        while True:
+            channel = bot.get_channel(channel_id)
+            if channel:
+                await sendMessage(
+                    type='adverts',
+                    message=None,
+                    channel=channel,
+                    guild_id=guild_id,
+                    allows_invites=allows_invites,
+                    allows_markdown=allows_markdown,
+                    allows_emojis=allows_emojis
+                )
+            await asyncio.sleep(delay)
 
-async def start_all_timers():
-	for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
-		delay = (advertChannels[guild_id][4] + (
-			rand.randint(10, 120) if advertChannels[guild_id][4] in {halfHour, noSlowmode} else
-			rand.randint(60, 300) if advertChannels[guild_id][4] == twoHours else
-			rand.randint(180, 900) if advertChannels[guild_id][4] == sixHours else
-			(logging.info("Failed to retrieve delay or delay not valid. Defaulting to highest value.") or rand.randint(180, 900))
-			)
-		)
-		channel = bot.get_channel(channel_id)
-	if not bot.timers.get(guild_id, False) and channel:
-		bot.timers[guild_id] = True
-		asyncio.create_task(start_timer(None, channel, guild_id))
+    for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, delay) in advertChannels.items():
+        bot.loop.create_task(send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay))
 
 
 
 @bot.event
 async def on_message(message):
-	if message.author == bot.user:
-		return
-	
-	channel = message.channel.id
-	
-	if not message.guild:
-		await sendMessage(type="dms", message=message, channel=channel)
-	
-	else:
-		guild_id = message.guild.id
-		if guild_id not in RLServers:
-			return
-		if guild_id not in bot.advertGaps:
-			bot.advertGaps[guild_id] = rand.randint(2, 4)
-			bot.advertGaps[guild_id] -= 1
-		if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
-			bot.timers[guild_id] = True
-			asyncio.create_task(start_timer(message, channel, guild_id))
+    if message.author == bot.user:
+        return
+
+    if not message.guild:  # Handle DMs
+        await sendMessage(type="dms", message=message, channel=message.channel)
+        return
+
+    guild_id = message.guild.id
+    if guild_id not in RLServers:
+        return
+
+    if guild_id not in bot.advertGaps:
+        bot.advertGaps[guild_id] = rand.randint(2, 4)
+
+    bot.advertGaps[guild_id] -= 1
+    if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
+        bot.timers[guild_id] = True
+        asyncio.create_task(periodic_advert_task())  # This might not be needed if already running
+
 	    
 bot.run(os.environ.get('HAVIC'))
