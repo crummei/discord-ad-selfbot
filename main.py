@@ -249,13 +249,13 @@ async def on_message(message):
 	
 	else:
 		guild_id = message.guild.id
-	if guild_id not in RLServers:
-		return
-	if guild_id not in bot.advertGaps:
-		bot.advertGaps[guild_id] = rand.randint(2, 4)
-		bot.advertGaps[guild_id] -= 1
-	if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
-		bot.timers[guild_id] = True
-		asyncio.create_task(start_timer(message, channel, guild_id))
+		if guild_id not in RLServers:
+			return
+		if guild_id not in bot.advertGaps:
+			bot.advertGaps[guild_id] = rand.randint(2, 4)
+			bot.advertGaps[guild_id] -= 1
+		if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
+			bot.timers[guild_id] = True
+			asyncio.create_task(start_timer(message, channel, guild_id))
 	    
 bot.run(os.environ.get('HAVIC'))
