@@ -61,7 +61,7 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 {"## __Who are we?__" if markdown else "__**Who are we?**__"}
 ‣ We are a small, but growing, rocket league organization in the competitive scene made so you can meet new people and find a team for you to compete in leagues with.
 
-{"## What do we offer?" if markdown else "**What do we offer?**"}}
+{"## What do we offer?" if markdown else "**What do we offer?**"}
 {"> `🤗`" if emoji and markdown else ("🤗" if emoji else ("> " if markdown else ""))} ‣ A nice, welcoming and non-toxic community
 {"> `👨‍🏫`" if emoji and markdown else ("👨‍🏫" if emoji else ("> " if markdown else ""))} ‣ Chance for __**free coaching**__ from a Top 1% Player in multiple game modes
 {"> `🏆`" if emoji and markdown else ("🏆" if emoji else ("> " if markdown else ""))} ‣ Fun and friendly __**tournaments**__ between other community members and other orgs! (WIP)
