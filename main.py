@@ -89,12 +89,14 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	# Check for a delay based on the slowmode and time since the last message sent
 	last_message_time = None
 	try:
-		async for last_message in channel.history(limit=1):
-			last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
+		async for last_message in channel.history(limit=30):
+			if last_message.author == bot.user:  # Ensure message is sent by bot
+				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
+				break
 	except Exception as e:
 		logging.info(f"{RED}Failed to fetch last message for slow mode check: {e}")
 
-	# Check if slowmode or time delay is in effect
+	# Check if slowmode or time delay
 	cooldown_expiration = None
 	if last_message_time:
 		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
@@ -112,19 +114,25 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 		logging.info(f"{RED}Skipping {guild_id} due to delay. Next message allowed at {next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
 		return
 
-	# Send the advert
+	# Before sending the new advert, delete the last advert sent
+	try:
+		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
+		# Delete the previous advert message if there is one
+		if bot_messages:
+			previous_message = bot_messages[0]
+			if previous_message.content == advert(allows_invites, allows_markdown, allows_emojis):
+				await previous_message.delete()
+				logging.info(f"{GREEN}Deleted previous advert message sent by the bot in {guild_id}.{RESET}")
+	except discord.HTTPException as e:
+		logging.error(f"{RED}Failed to fetch messages for deletion: {e}{RESET}")
+
+	# Send the new advert
 	try:
 		await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
 		logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
-		
-		# Delete the last 3 messages sent by the bot in the channel
-		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user][:3]
-		for msg in bot_messages:
-			await msg.delete()
-		logging.info(f"{GREEN}Deleted {len(bot_messages)} messages sent by the bot in {guild_id}.{RESET}")
-
 	except discord.HTTPException as e:
 		logging.error(f"{RED}Failed to send advert: {e}{RESET}")
+
 
 async def send_dms(channel, message):
 	retry_delay = 5
