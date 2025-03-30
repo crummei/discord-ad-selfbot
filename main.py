@@ -156,10 +156,10 @@ async def sendMessage(type, message, channel, **kwargs):
 	elif type == "dms":
 		UIDRegex = r"(\b\d{17,19}\b|<@!?\d{17,19}>)"
 		cleanRegex = r"<@!?(\d{17,19})>|(\b\d{17,19}\b)"
+		user = re.search(UIDRegex, message.content)
 
-		if message.author.id in [1022513154623811655, 178939117420281866]:
-			user = re.search(UIDRegex, message.content)
-			if user:
+		if user:
+			if message.author.id in [1022513154623811655, 178939117420281866]:
 				userID = user.group(1)  # Extract matched User ID or mention
 				userID = re.sub(r"\D", "", userID)  # Remove non-numeric characters
 				newChannel = bot.get_user(int(userID))
