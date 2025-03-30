@@ -155,7 +155,6 @@ async def sendMessage(type, message, channel, **kwargs):
 
 	elif type == "dms":
 		UIDRegex = r"(\b\d{17,19}\b|<@!?\d{17,19}>)"
-		cleanRegex = r"<@!?(\d{17,19})>|(\b\d{17,19}\b)"
 		user = re.search(UIDRegex, message.content)
 
 		if user:
@@ -165,7 +164,7 @@ async def sendMessage(type, message, channel, **kwargs):
 				newChannel = bot.get_user(int(userID))
 
 				# Remove all User IDs or mentions
-				cleanMessage = re.sub(cleanRegex, "", message.content).strip()
+				cleanMessage = re.sub(UIDRegex, "", message.content, count=1).strip()
 
 				if cleanMessage:
 					await newChannel.send(cleanMessage)
