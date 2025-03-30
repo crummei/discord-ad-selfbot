@@ -180,31 +180,23 @@ async def sendMessage(type, message, channel, **kwargs):
 			logging.info(f"{GREEN}Relayed DM to bradley")
 			await send_dms(crum, message)
 			logging.info(f"{GREEN}Relayed DM to crummei")
-        
-async def send_adverts_on_startup():
-	for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
+
+async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
+	while True:
 		channel = bot.get_channel(channel_id)
-		await asyncio.sleep(5)
 		if channel:
-			await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
-			await asyncio.sleep(10)
+			await sendMessage(
+				type='adverts',
+				message=None,
+				channel=channel,
+				guild_id=guild_id,
+				allows_invites=allows_invites,
+				allows_markdown=allows_markdown,
+				allows_emojis=allows_emojis
+			)
+		await asyncio.sleep(delay)
 
 async def periodic_advert_task():
-    async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
-        while True:
-            channel = bot.get_channel(channel_id)
-            if channel:
-                await sendMessage(
-                    type='adverts',
-                    message=None,
-                    channel=channel,
-                    guild_id=guild_id,
-                    allows_invites=allows_invites,
-                    allows_markdown=allows_markdown,
-                    allows_emojis=allows_emojis
-                )
-            await asyncio.sleep(delay)
-			
     for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, delay) in advertChannels.items():
         bot.loop.create_task(send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay))
 
@@ -216,18 +208,6 @@ async def on_message(message):
     if not message.guild:  # Handle DMs
         await sendMessage(type="dms", message=message, channel=message.channel)
         return
-
-    guild_id = message.guild.id
-    if guild_id not in RLServers:
-        return
-
-    if guild_id not in bot.advertGaps:
-        bot.advertGaps[guild_id] = rand.randint(2, 4)
-
-    bot.advertGaps[guild_id] -= 1
-    if bot.advertGaps[guild_id] <= 0 and not bot.timers.get(guild_id, False):
-        bot.timers[guild_id] = True
-        asyncio.create_task(periodic_advert_task())  # This might not be needed if already running
 
 	    
 bot.run(os.environ.get('HAVIC'))
