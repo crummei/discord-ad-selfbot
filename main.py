@@ -168,7 +168,7 @@ async def sendMessage(type, message, channel, **kwargs):
 				cleanMessage = re.sub(cleanRegex, "", message.content).strip()
 
 				if cleanMessage:
-					await message.channel.send(cleanMessage)
+					await newChannel.send(cleanMessage)
 				else:
 					await message.channel.send("Message included only a recipient.")
 
