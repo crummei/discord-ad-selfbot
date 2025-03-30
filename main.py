@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import asyncio
 import random as rand
+import re
 from datetime import datetime, timedelta, timezone
 import pytz
 cet = pytz.timezone("Europe/Copenhagen")
@@ -114,25 +115,23 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 		logging.info(f"{RED}Skipping {guild_id} due to delay. Next message allowed at {next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
 		return
 
-	# Before sending the new advert, delete the last advert sent
+	# Before sending the new advert, delete the previous adverts
 	try:
-		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
-		# Delete the previous advert message if there is one
-		if bot_messages:
-			previous_message = bot_messages[0]
-			if previous_message.content == advert(allows_invites, allows_markdown, allows_emojis):
-				await previous_message.delete()
-				logging.info(f"{GREEN}Deleted previous advert message sent by the bot in {guild_id}.{RESET}")
+		bot_messages = [msg async for msg in channel.history(limit=30) if msg.author == bot.user]
+		for message in bot_messages:
+			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
+				await message.delete()
+				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in {guild_id}.{RESET}")
+
+				# Send the new advert
+				try:
+					await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
+					logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
+				except discord.HTTPException as e:
+					logging.error(f"{RED}Failed to send advert: {e}{RESET}")
+
 	except discord.HTTPException as e:
 		logging.error(f"{RED}Failed to fetch messages for deletion: {e}{RESET}")
-
-	# Send the new advert
-	try:
-		await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-		logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
-	except discord.HTTPException as e:
-		logging.error(f"{RED}Failed to send advert: {e}{RESET}")
-
 
 async def send_dms(channel, message):
 	retry_delay = 5
@@ -153,15 +152,34 @@ async def sendMessage(type, message, channel, **kwargs):
 		allows_markdown = kwargs.get("allows_markdown", False)
 		allows_emojis = kwargs.get("allows_emojis", False)
 		await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
-	
+
 	elif type == "dms":
-		brad = bot.get_user(1022513154623811655)
-		crum = bot.get_user(178939117420281866)
-		
-		await send_dms(brad, message)
-		logging.info(f"{GREEN}Relayed DM to bradley")
-		await send_dms(crum, message)
-		logging.info(f"{GREEN}Relayed DM to crummei")
+		UIDRegex = r"(\b\d{17,19}\b|<@!?\d{17,19}>)"
+		cleanRegex = r"<@!?(\d{17,19})>|(\b\d{17,19}\b)"
+
+		if message.author.id in [1022513154623811655, 178939117420281866]:
+			user = re.search(UIDRegex, message.content)
+			if user:
+				userID = user.group(1)  # Extract matched User ID or mention
+				userID = re.sub(r"\D", "", userID)  # Remove non-numeric characters
+				newChannel = bot.get_user(int(userID))
+
+				# Remove all User IDs or mentions
+				cleanMessage = re.sub(cleanRegex, "", message.content).strip()
+
+				if cleanMessage:
+					await message.channel.send(cleanMessage)
+				else:
+					await message.channel.send("Message included only a recipient.")
+
+		else:
+			brad = bot.get_user(1022513154623811655)
+			crum = bot.get_user(178939117420281866)
+			
+			await send_dms(brad, message)
+			logging.info(f"{GREEN}Relayed DM to bradley")
+			await send_dms(crum, message)
+			logging.info(f"{GREEN}Relayed DM to crummei")
         
 async def send_adverts_on_startup():
 	for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, *_) in advertChannels.items():
