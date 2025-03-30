@@ -95,7 +95,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
 				break
 	except Exception as e:
-		logging.info(f"{RED}Failed to fetch last message for slow mode check: {e}")
+		logging.error(f"{RED}Failed to fetch last message for slow mode check: {e}")
 
 	# Check if slowmode or time delay
 	cooldown_expiration = None
@@ -103,7 +103,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
 		if datetime.now(timezone.utc) < cooldown_expiration:
 			cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-			logging.info(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
+			logging.warning(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
 			return
 
 	# Apply a minimum 30-minute gap before sending the advert again
@@ -112,7 +112,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
 		next_allowed_time = last_message_time + timedelta(seconds=delay)
 		next_allowed_time_cet = next_allowed_time.astimezone(cet)
-		logging.info(f"{RED}Skipping {guild_id} due to delay. Next message allowed at {next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
+		logging.warning(f"{RED}Skipping {guild_id} due to delay. Next message allowed at {next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
 		return
 
 	# Before sending the new advert, delete the previous adverts
@@ -140,7 +140,7 @@ async def send_dms(channel, message):
 			await channel.send(f'<@{message.author.id}> said:\n```{message.content}```')
 			return
 		except discord.HTTPException as e:
-			logging.info(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}")
+			logging.error(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}")
 			await asyncio.sleep(retry_delay)
 			retry_delay = min(retry_delay * 2, 60)
 
@@ -161,15 +161,17 @@ async def sendMessage(type, message, channel, **kwargs):
 			if message.author.id in [1022513154623811655, 178939117420281866]:
 				userID = user.group(1)  # Extract matched User ID or mention
 				userID = re.sub(r"\D", "", userID)  # Remove non-numeric characters
-				newChannel = bot.get_user(int(userID))
+				user = bot.get_user(int(userID))
 
 				# Remove all User IDs or mentions
 				cleanMessage = re.sub(UIDRegex, "", message.content, count=1).strip()
 
 				if cleanMessage:
-					await newChannel.send(cleanMessage)
+					await user.send(cleanMessage)
+					logging.info(f"{GREEN}Relayed DM to {user.mention}")
 				else:
 					await message.channel.send("Message included only a recipient.")
+					logging.info(f"{YELLOW}Received only recipient for relay.")
 
 		else:
 			brad = bot.get_user(1022513154623811655)
