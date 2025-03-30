@@ -137,7 +137,7 @@ async def send_dms(channel, message):
 	retry_delay = 5
 	while True:
 		try:
-			await channel.send(f'{message.author} said:\n```{message.content}```')
+			await channel.send(f'<@{message.author.id}> said:\n```{message.content}```')
 			return
 		except discord.HTTPException as e:
 			logging.info(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}")
