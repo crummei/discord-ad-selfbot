@@ -137,7 +137,7 @@ async def send_dms(channel, message):
 	retry_delay = 5
 	while True:
 		try:
-			await channel.send(f'<@{message.author.id}> said:\n```{message.content}```')
+			await channel.send(f'<@{message.author.id}> ({message.author.id}) said:\n```{message.content}```')
 			return
 		except discord.HTTPException as e:
 			logging.error(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}")
@@ -169,6 +169,15 @@ async def sendMessage(type, message, channel, **kwargs):
 				if cleanMessage:
 					await user.send(cleanMessage)
 					logging.info(f"{GREEN}Relayed DM to {user.mention}")
+
+					brad = bot.get_user(1022513154623811655)
+					crum = bot.get_user(178939117420281866)
+					logMessage = f"{message.author} replied:\n```{cleanMessage}```"
+					await send_dms(brad, logMessage)
+					logging.info(f"{GREEN}Relayed response to bradley")
+					await send_dms(crum, logMessage)
+					logging.info(f"{GREEN}Relayed response to crummei")
+
 				else:
 					await message.channel.send("Message included only a recipient.")
 					logging.info(f"{YELLOW}Received only recipient for relay.")
