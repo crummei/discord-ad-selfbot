@@ -172,16 +172,16 @@ async def sendMessage(type, message, channel, **kwargs):
 
 				if cleanMessage:
 					await user.send(cleanMessage)
-					logging.info(f"{GREEN}Relayed DM to{RESET} {user.mention}{GREEN}.{RESET}")
+					logging.info(f"{GREEN}Relayed DM from{RESET} {message.author}{GREEN} to{RESET} {user.name}{GREEN}:{RESET}\n{cleanMessage}")
 
-					logMessage = f"{message.author} replied:\n```{cleanMessage}```"
+					logMessage = f"{message.author} messaged {user.name}:\n```{cleanMessage}```"
 
 					brad = bot.get_user(1022513154623811655) or await bot.fetch_user(1022513154623811655)
 					crum = bot.get_user(178939117420281866) or await bot.fetch_user(178939117420281866)
 					await send_dms(brad, logMessage)
-					logging.info(f"{GREEN}Relayed response to bradley.{RESET}")
+					logging.info(f"{GREEN}Relayed response to bradley:{RESET}\n{logMessage}")
 					await send_dms(crum, logMessage)
-					logging.info(f"{GREEN}Relayed response to crummei.{RESET}")
+					logging.info(f"{GREEN}Relayed response to crummei:{RESET}\n{logMessage}")
 
 				else:
 					await message.channel.send("Message included only a recipient.")
@@ -192,9 +192,9 @@ async def sendMessage(type, message, channel, **kwargs):
 			crum = bot.get_user(178939117420281866) or await bot.fetch_user(178939117420281866)
 			
 			await send_dms(brad, message)
-			logging.info(f"{GREEN}Relayed DM to bradley.{RESET}")
+			logging.info(f"{GREEN}Relayed DM to bradley:{RESET}\n{message.content}")
 			await send_dms(crum, message)
-			logging.info(f"{GREEN}Relayed DM to crummei.{RESET}")
+			logging.info(f"{GREEN}Relayed DM to crummei:{RESET}\n{message.content}")
 
 async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
 	while True:
