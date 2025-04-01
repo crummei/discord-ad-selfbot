@@ -80,7 +80,7 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 
 @bot.event
 async def on_ready():
-    logging.info(f'{YELLOW}Logged in as {bot.user}{RESET}\n----------------------------\n')
+    logging.info(f'{YELLOW}Logged in as{RESET} {bot.user}{YELLOW}\n----------------------------\n{RESET}')
     bot.advertGaps = {}  # Initialize missing attributes
     bot.timers = {}
     bot.loop.create_task(periodic_advert_task())  # Start periodic task
@@ -95,7 +95,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
 				break
 	except Exception as e:
-		logging.error(f"{RED}Failed to fetch last message for slow mode check: {e}")
+		logging.error(f"{RED}Failed to fetch last message for slow mode check:{RESET} {e}")
 
 	# Check if slowmode or time delay
 	cooldown_expiration = None
@@ -103,7 +103,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
 		if datetime.now(timezone.utc) < cooldown_expiration:
 			cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-			logging.warning(f"{RED}Skipping {guild_id} due to active slow mode. Next message allowed at {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
+			logging.warning(f"{RED}Skipping{RESET} {guild_id}{RED} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
 			return
 
 	# Apply a minimum 30-minute gap before sending the advert again
@@ -112,7 +112,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
 		next_allowed_time = last_message_time + timedelta(seconds=delay)
 		next_allowed_time_cet = next_allowed_time.astimezone(cet)
-		logging.warning(f"{RED}Skipping {guild_id} due to delay. Next message allowed at {next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}.{RESET}")
+		logging.warning(f"{RED}Skipping {RESET}{guild_id}{RED} due to delay. Next message allowed at {RESET}{next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
 		return
 
 	# Before sending the new advert, delete the previous adverts
@@ -121,26 +121,26 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 		for message in bot_messages:
 			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
 				await message.delete()
-				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in {guild_id}.{RESET}")
+				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in{RESET} {guild_id}{GREEN}.{RESET}")
 
 				# Send the new advert
 				try:
 					await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-					logging.info(f"{GREEN}Sent advert to {guild_id} in {channel}{RESET}")
+					logging.info(f"{GREEN}Sent advert to {RESET}{guild_id}{GREEN} in {RESET}{channel}{GREEN}.{RESET}")
 				except discord.HTTPException as e:
-					logging.error(f"{RED}Failed to send advert: {e}{RESET}")
+					logging.error(f"{RED}Failed to send advert:{RESET} {e}{RED}.{RESET}")
 
 	except discord.HTTPException as e:
-		logging.error(f"{RED}Failed to fetch messages for deletion: {e}{RESET}")
+		logging.error(f"{RED}Failed to fetch messages for deletion:{RESET} {e}{RED}{RESET}")
 
-async def send_dms(channel, message):
+async def send_dms(channel, logMessage):
 	retry_delay = 5
 	while True:
 		try:
-			await channel.send(f'<@{message.author.id}> ({message.author.id}) said:\n```{message.content}```')
+			await channel.send(logMessage)
 			return
 		except discord.HTTPException as e:
-			logging.error(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}")
+			logging.error(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}{RESET}")
 			await asyncio.sleep(retry_delay)
 			retry_delay = min(retry_delay * 2, 60)
 
@@ -161,35 +161,40 @@ async def sendMessage(type, message, channel, **kwargs):
 			if message.author.id in [1022513154623811655, 178939117420281866]:
 				userID = user.group(1)  # Extract matched User ID or mention
 				userID = re.sub(r"\D", "", userID)  # Remove non-numeric characters
-				user = bot.get_user(int(userID))
+				user = bot.get_user(int(userID)) or await bot.fetch_user(int(userID))
 
+				if not user:
+					logging.warning(f"{RED}Failed to fetch user with ID {RESET}{userID}{RED}.{RESET}")
+					return
+				
 				# Remove all User IDs or mentions
 				cleanMessage = re.sub(UIDRegex, "", message.content, count=1).strip()
 
 				if cleanMessage:
 					await user.send(cleanMessage)
-					logging.info(f"{GREEN}Relayed DM to {user.mention}")
+					logging.info(f"{GREEN}Relayed DM to{RESET} {user.mention}{GREEN}.{RESET}")
 
-					brad = bot.get_user(1022513154623811655)
-					crum = bot.get_user(178939117420281866)
 					logMessage = f"{message.author} replied:\n```{cleanMessage}```"
+
+					brad = bot.get_user(1022513154623811655) or await bot.fetch_user(1022513154623811655)
+					crum = bot.get_user(178939117420281866) or await bot.fetch_user(178939117420281866)
 					await send_dms(brad, logMessage)
-					logging.info(f"{GREEN}Relayed response to bradley")
+					logging.info(f"{GREEN}Relayed response to bradley.{RESET}")
 					await send_dms(crum, logMessage)
-					logging.info(f"{GREEN}Relayed response to crummei")
+					logging.info(f"{GREEN}Relayed response to crummei.{RESET}")
 
 				else:
 					await message.channel.send("Message included only a recipient.")
-					logging.info(f"{YELLOW}Received only recipient for relay.")
+					logging.info(f"{YELLOW}Received only recipient for relay.{RESET}")
 
 		else:
-			brad = bot.get_user(1022513154623811655)
-			crum = bot.get_user(178939117420281866)
+			brad = bot.get_user(1022513154623811655) or await bot.fetch_user(1022513154623811655)
+			crum = bot.get_user(178939117420281866) or await bot.fetch_user(178939117420281866)
 			
 			await send_dms(brad, message)
-			logging.info(f"{GREEN}Relayed DM to bradley")
+			logging.info(f"{GREEN}Relayed DM to bradley.{RESET}")
 			await send_dms(crum, message)
-			logging.info(f"{GREEN}Relayed DM to crummei")
+			logging.info(f"{GREEN}Relayed DM to crummei.{RESET}")
 
 async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
 	while True:
