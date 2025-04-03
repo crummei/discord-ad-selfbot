@@ -137,7 +137,7 @@ async def send_dms(user, message):
 		try:
 			UIDRegex = r"(\b\d{17,19}\b|<@!?\d{17,19}>)"
 			cleanMessage = re.sub(UIDRegex, "", message.content, count=1).strip()
-			await user.send(f"{message.author} ({message.author.id}) messaged {user.name}:\n```{cleanMessage}```")
+			await user.send(f"{message.author.name} ({message.author.id}) said:\n```{cleanMessage}```")
 			return
 		except discord.HTTPException as e:
 			logging.error(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}{RESET}")
@@ -172,7 +172,7 @@ async def sendMessage(type, message, channel, **kwargs):
 
 				if cleanMessage:
 					await user.send(cleanMessage)
-					logging.info(f"{GREEN}Relayed DM from{RESET} {message.author}{GREEN} to{RESET} {user.name}({user.id}){GREEN}:{RESET}\n{cleanMessage}")
+					logging.info(f"{GREEN}Relayed DM from{RESET} {message.author}{GREEN} to{RESET} {user.name} ({user.id}){GREEN}:{RESET}\n{cleanMessage}")
 
 					brad = bot.get_user(1022513154623811655)
 					await send_dms(brad, message)
