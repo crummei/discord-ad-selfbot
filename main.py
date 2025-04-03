@@ -81,8 +81,6 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 @bot.event
 async def on_ready():
     logging.info(f'{YELLOW}Logged in as{RESET} {bot.user}{YELLOW}\n----------------------------\n{RESET}')
-    bot.advertGaps = {}  # Initialize missing attributes
-    bot.timers = {}
     bot.loop.create_task(periodic_advert_task())  # Start periodic task
     logging.info(f'{YELLOW}Started periodic advert task{RESET}')
 
@@ -133,11 +131,13 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	except discord.HTTPException as e:
 		logging.error(f"{RED}Failed to fetch messages for deletion:{RESET} {e}{RED}{RESET}")
 
-async def send_dms(channel, logMessage):
+async def send_dms(user, message):
 	retry_delay = 5
 	while True:
 		try:
-			await channel.send(logMessage)
+			UIDRegex = r"(\b\d{17,19}\b|<@!?\d{17,19}>)"
+			cleanMessage = re.sub(UIDRegex, "", message.content, count=1).strip()
+			await user.send(f"{message.author} ({message.author.id}) messaged {user.name}:\n```{cleanMessage}```")
 			return
 		except discord.HTTPException as e:
 			logging.error(f"{RED}Rate limit hit! Retrying in{RESET} {retry_delay}{RED} sec...{RESET} {e}{RESET}")
@@ -172,15 +172,15 @@ async def sendMessage(type, message, channel, **kwargs):
 
 				if cleanMessage:
 					await user.send(cleanMessage)
-					logging.info(f"{GREEN}Relayed DM from{RESET} {message.author}{GREEN} to{RESET} {user.name}{GREEN}:{RESET}\n{cleanMessage}")
-					logMessage = f"{message.author} messaged {user.name}:\n```{cleanMessage}```"
+					logging.info(f"{GREEN}Relayed DM from{RESET} {message.author}{GREEN} to{RESET} {user.name}({user.id}){GREEN}:{RESET}\n{cleanMessage}")
 
 					brad = bot.get_user(1022513154623811655)
+					await send_dms(brad, message)
+
 					crum = bot.get_user(178939117420281866)
-					await send_dms(brad, logMessage)
-					logging.info(f"{GREEN}Relayed response to bradley:{RESET}\n{cleanMessage}")
-					await send_dms(crum, logMessage)
-					logging.info(f"{GREEN}Relayed response to crummei:{RESET}\n{cleanMessage}")
+					await send_dms(crum, message)
+
+					logging.info(f"{GREEN}Relayed response to crummei and bradley:{RESET}\n{cleanMessage}")
 
 				else:
 					await message.channel.send("Message included only a recipient.")
@@ -188,12 +188,12 @@ async def sendMessage(type, message, channel, **kwargs):
 
 		else:
 			brad = bot.get_user(1022513154623811655)
-			crum = bot.get_user(178939117420281866)
-			
 			await send_dms(brad, message)
-			logging.info(f"{GREEN}Relayed DM to bradley:{RESET}\n{message.content}")
+
+			crum = bot.get_user(178939117420281866)
 			await send_dms(crum, message)
-			logging.info(f"{GREEN}Relayed DM to crummei:{RESET}\n{message.content}")
+
+			logging.info(f"{GREEN}Relayed DM to crummei and bradley:{RESET}\n{message.content}")
 
 async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
 	while True:
