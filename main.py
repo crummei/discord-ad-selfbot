@@ -106,7 +106,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 			logging.warning(f"{RED}Skipping{RESET} {guild_id}{RED} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
 			return
 
-	# Apply a minimum 30-minute gap before sending the advert again
+	# Apply a minimum 30 minute gap before sending the advert again
 	current_time = datetime.now(timezone.utc)
 	delay = noSlowmode if guild_id in advertChannels else halfHour
 	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
@@ -161,7 +161,7 @@ async def sendMessage(type, message, channel, **kwargs):
 			if message.author.id in [1022513154623811655, 178939117420281866]:
 				userID = user.group(1)  # Extract matched User ID or mention
 				userID = re.sub(r"\D", "", userID)  # Remove non-numeric characters
-				user = bot.get_user(int(userID)) or await bot.fetch_user(int(userID))
+				user = bot.get_user(int(userID))
 
 				if not user:
 					logging.warning(f"{RED}Failed to fetch user with ID {RESET}{userID}{RED}.{RESET}")
@@ -173,23 +173,22 @@ async def sendMessage(type, message, channel, **kwargs):
 				if cleanMessage:
 					await user.send(cleanMessage)
 					logging.info(f"{GREEN}Relayed DM from{RESET} {message.author}{GREEN} to{RESET} {user.name}{GREEN}:{RESET}\n{cleanMessage}")
-
 					logMessage = f"{message.author} messaged {user.name}:\n```{cleanMessage}```"
 
-					brad = bot.get_user(1022513154623811655) or await bot.fetch_user(1022513154623811655)
-					crum = bot.get_user(178939117420281866) or await bot.fetch_user(178939117420281866)
+					brad = bot.get_user(1022513154623811655)
+					crum = bot.get_user(178939117420281866)
 					await send_dms(brad, logMessage)
-					logging.info(f"{GREEN}Relayed response to bradley:{RESET}\n{logMessage}")
+					logging.info(f"{GREEN}Relayed response to bradley:{RESET}\n{cleanMessage}")
 					await send_dms(crum, logMessage)
-					logging.info(f"{GREEN}Relayed response to crummei:{RESET}\n{logMessage}")
+					logging.info(f"{GREEN}Relayed response to crummei:{RESET}\n{cleanMessage}")
 
 				else:
 					await message.channel.send("Message included only a recipient.")
 					logging.info(f"{YELLOW}Received only recipient for relay.{RESET}")
 
 		else:
-			brad = bot.get_user(1022513154623811655) or await bot.fetch_user(1022513154623811655)
-			crum = bot.get_user(178939117420281866) or await bot.fetch_user(178939117420281866)
+			brad = bot.get_user(1022513154623811655)
+			crum = bot.get_user(178939117420281866)
 			
 			await send_dms(brad, message)
 			logging.info(f"{GREEN}Relayed DM to bradley:{RESET}\n{message.content}")
@@ -224,5 +223,4 @@ async def on_message(message):
         await sendMessage(type="dms", message=message, channel=message.channel)
         return
 
-	    
-bot.run(os.environ.get('HAVIC'))
+bot.run(os.environ.get('TOKEN'))
