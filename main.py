@@ -105,17 +105,24 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 			logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
 			return
 
-	# Before sending the new advert, delete the previous adverts
-	try:
-		bot_messages = [msg async for msg in channel.history(limit=30) if msg.author == bot.user]
+	# Apply minimum 30min gap before sending advert again
+	current_time = datetime.now(timezone.utc)
+	delay = advertChannels[guild_id][4] if guild_id in advertChannels else halfHour
+	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
+		next_allowed_time = last_message_time + timedelta(seconds=delay)
+		next_allowed_time_cet = next_allowed_time.astimezone(cet)
+		logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to delay. Next message allowed at {RESET}{next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
+		return
 
+	# Before sending new advert, delete previous
+	try:
 		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
 		for message in bot_messages:
 			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
 				await message.delete()
 				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in{RESET} {guild_id}{GREEN}.{RESET}")
 
-				# Send the new advert
+				# Send new advert
 				try:
 					await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
 					logging.info(f"{GREEN}Sent advert to {RESET}{guild_id}{GREEN} in {RESET}{channel}{GREEN}.{RESET}")
