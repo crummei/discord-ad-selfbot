@@ -101,7 +101,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
 		if datetime.now(timezone.utc) < cooldown_expiration:
 			cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
-			logging.warning(f"{RED}Skipping{RESET} {guild_id}{RED} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
+			logging.info(f"{RED}Skipping{RESET} {guild_id}{RED} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
 			return
 
 	# Apply a minimum 30 minute gap before sending the advert again
@@ -110,7 +110,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
 		next_allowed_time = last_message_time + timedelta(seconds=delay)
 		next_allowed_time_cet = next_allowed_time.astimezone(cet)
-		logging.warning(f"{RED}Skipping {RESET}{guild_id}{RED} due to delay. Next message allowed at {RESET}{next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
+		logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to delay. Next message allowed at {RESET}{next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
 		return
 
 	# Before sending the new advert, delete the previous adverts
