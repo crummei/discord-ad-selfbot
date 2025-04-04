@@ -80,37 +80,51 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 
 @bot.event
 async def on_ready():
-    logging.info(f'{YELLOW}Logged in as{RESET} {bot.user}{YELLOW}\n----------------------------\n{RESET}')
-    bot.loop.create_task(periodic_advert_task())  # Start periodic task
-    logging.info(f'{YELLOW}Started periodic advert task{RESET}')
+	logging.info(f'{YELLOW}Logged in as{RESET} {bot.user}{YELLOW}\n----------------------------\n{RESET}')
+	bot.loop.create_task(periodic_advert_task())  # Start periodic task
+	logging.info(f'{YELLOW}Started periodic advert task{RESET}')
 
 async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):  
-    last_message_time = None
-    try:
-        async for last_message in channel.history(limit=10):
-            if last_message.author == bot.user:
-                last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
-                break
-    except Exception as e:
-        logging.error(f"{RED}Failed to fetch last message for slow mode check in {RESET}{guild_id}{RED}:{RESET} {e}")
+	last_message_time = None
+	try:
+		async for last_message in channel.history(limit=10):
+			if last_message.author == bot.user:
+				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
+				break
+	except Exception as e:
+		logging.error(f"{RED}Failed to fetch last message for slow mode check in {RESET}{guild_id}{RED}:{RESET} {e}")
 
-    await asyncio.sleep(1)
+	await asyncio.sleep(1)
 
-    # Slow mode check
-    cooldown_expiration = None
-    if last_message_time:
-        cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
-        if datetime.now(timezone.utc) < cooldown_expiration:
-            next_time = cooldown_expiration.astimezone(cet).strftime('%Y-%m-%d %H:%M:%S %Z')
-            logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
-            return
+	# Slow mode check
+	cooldown_expiration = None
+	if last_message_time:
+		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
+		if datetime.now(timezone.utc) < cooldown_expiration:
+			next_time = cooldown_expiration.astimezone(cet).strftime('%Y-%m-%d %H:%M:%S %Z')
+			logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
+			return
 
-    try:
-        # Send advert
-        await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-        logging.info(f"{GREEN}Sent advert in{RESET} {guild_id} ({channel.id})")
-    except discord.HTTPException as e:
-        logging.error(f"{RED}Failed to send advert in {RESET}{guild_id} ({channel.id}){RED}:{RESET} {e}")
+	# Before sending the new advert, delete the previous adverts
+	try:
+		bot_messages = [msg async for msg in channel.history(limit=30) if msg.author == bot.user]
+
+		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
+		for message in bot_messages:
+			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
+				await message.delete()
+				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in{RESET} {guild_id}{GREEN}.{RESET}")
+
+				# Send the new advert
+				try:
+					await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
+					logging.info(f"{GREEN}Sent advert to {RESET}{guild_id}{GREEN} in {RESET}{channel}{GREEN}.{RESET}")
+				
+				except discord.HTTPException as e:
+					logging.error(f"{RED}Failed to send advert in {RESET}{guild_id} ({channel.id}){RED}:{RESET} {e}")
+
+	except discord.HTTPException as e:
+		logging.error(f"{RED}Failed to fetch messages for deletion:{RESET} {e}{RED}{RESET}")
 
 async def send_dms(user, message):
 	retry_delay = 5
