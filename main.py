@@ -84,9 +84,7 @@ async def on_ready():
     bot.loop.create_task(periodic_advert_task())  # Start periodic task
     logging.info(f'{YELLOW}Started periodic advert task{RESET}')
 
-async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):
-    logging.info(f"Checking slow mode for {guild_id} ({channel.id})")
-    
+async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):  
     last_message_time = None
     try:
         async for last_message in channel.history(limit=10):
@@ -94,7 +92,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
                 last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
                 break
     except Exception as e:
-        logging.error(f"Failed to fetch last message in {guild_id}: {e}")
+        logging.error(f"{RED}Failed to fetch last message for slow mode check in {RESET}{guild_id}{RED}:{RESET} {e}")
 
     await asyncio.sleep(1)
 
@@ -104,15 +102,15 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
         cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
         if datetime.now(timezone.utc) < cooldown_expiration:
             next_time = cooldown_expiration.astimezone(cet).strftime('%Y-%m-%d %H:%M:%S %Z')
-            logging.info(f"Skipping {guild_id} due to slow mode. Next message allowed at {next_time}.")
+            logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
             return
 
     try:
         # Send advert
         await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-        logging.info(f"Sent advert in {guild_id} ({channel.id})")
+        logging.info(f"{GREEN}Sent advert in{RESET} {guild_id} ({channel.id})")
     except discord.HTTPException as e:
-        logging.error(f"Failed to send advert in {guild_id} ({channel.id}): {e}")
+        logging.error(f"{RED}Failed to send advert in {RESET}{guild_id} ({channel.id}){RED}:{RESET} {e}")
 
 async def send_dms(user, message):
 	retry_delay = 5
@@ -134,7 +132,6 @@ async def sendMessage(type, message, channel, **kwargs):
 		allows_invites = kwargs.get("allows_invites", False)
 		allows_markdown = kwargs.get("allows_markdown", False)
 		allows_emojis = kwargs.get("allows_emojis", False)
-		logging.info(f"Attempting to send advert in {guild_id} ({channel.id})")
 		await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
 
 	elif type == "dms":
