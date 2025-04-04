@@ -95,6 +95,9 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	except Exception as e:
 		logging.error(f"{RED}Failed to fetch last message for slow mode check:{RESET} {e}")
 
+	# Ensure it always moves to the next server
+	await asyncio.sleep(1)
+
 	# Check if slowmode or time delay
 	cooldown_expiration = None
 	if last_message_time:
@@ -151,6 +154,7 @@ async def sendMessage(type, message, channel, **kwargs):
 		allows_invites = kwargs.get("allows_invites", False)
 		allows_markdown = kwargs.get("allows_markdown", False)
 		allows_emojis = kwargs.get("allows_emojis", False)
+		logging.info(f"Attempting to send advert in {guild_id} ({channel.id})")
 		await send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis)
 
 	elif type == "dms":
