@@ -88,7 +88,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 	# Check for a delay based on the slowmode and time since the last message sent
 	last_message_time = None
 	try:
-		async for last_message in channel.history(limit=30):
+		async for last_message in channel.history(limit=10):
 			if last_message.author == bot.user:  # Ensure message is sent by bot
 				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
 				break
@@ -115,7 +115,7 @@ async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows
 
 	# Before sending the new advert, delete the previous adverts
 	try:
-		bot_messages = [msg async for msg in channel.history(limit=30) if msg.author == bot.user]
+		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
 		for message in bot_messages:
 			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
 				await message.delete()
@@ -196,30 +196,38 @@ async def sendMessage(type, message, channel, **kwargs):
 			logging.info(f"{GREEN}Relayed DM to crummei and bradley:{RESET}\n{message.content}")
 
 async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
-	while True:
-		channel = bot.get_channel(channel_id)
-		if channel:
-			await sendMessage(
-				type='adverts',
-				message=None,
-				channel=channel,
-				guild_id=guild_id,
-				allows_invites=allows_invites,
-				allows_markdown=allows_markdown,
-				allows_emojis=allows_emojis
-			)
-		await asyncio.sleep(delay)
+    await bot.wait_until_ready()
+    try:
+        channel = await bot.fetch_channel(channel_id)
+    except discord.HTTPException as e:
+        logging.error(f"Failed to fetch channel {channel_id} in {guild_id}: {e}")
+        return
+
+    while not bot.is_closed():
+        await sendMessage(
+            type='adverts',
+            message=None,
+            channel=channel,
+            guild_id=guild_id,
+            allows_invites=allows_invites,
+            allows_markdown=allows_markdown,
+            allows_emojis=allows_emojis
+        )
+        await asyncio.sleep(delay)
 
 async def periodic_advert_task():
-    for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, delay) in advertChannels.items():
-        bot.loop.create_task(send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay))
+    tasks = [
+        send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay)
+        for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, delay) in advertChannels.items()
+    ]
+    await asyncio.gather(*tasks)
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
 
-    if not message.guild:  # Handle DMs
+    if not message.guild:  # If DM
         await sendMessage(type="dms", message=message, channel=message.channel)
         return
 
