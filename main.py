@@ -38,7 +38,7 @@ noSlowmode = halfHour
 
 advertChannels = {
 #   Server ID:              	Channel ID,           	Invites,    	Markdown,   	Emoji,   	Delay
-    152517096104919042:		(296693573292916741,	False,		False,		True,		sixHours),		# Official RL Server
+    152517096104919042:		(296693573292916741,	False,		False,		False,		sixHours),		# Official RL Server
     677907326568628247:		(748545565243211776,	True,		True,		True,		twoHours),		# Striped
     681994761787146253:		(699019104228475004,	True,		True,		True,		noSlowmode),	# Uuest
 #    1061789478508843109:	(1074743282212544643,	False,		False,		True,		noSlowmode),		# Yota (Need lvl 3 to promo) (Server promo not allowed)
