@@ -84,33 +84,55 @@ async def on_ready():
     bot.loop.create_task(periodic_advert_task())  # Start periodic task
     logging.info(f'{YELLOW}Started periodic advert task{RESET}')
 
-async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):  
-    last_message_time = None
-    try:
-        async for last_message in channel.history(limit=10):
-            if last_message.author == bot.user:
-                last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
-                break
-    except Exception as e:
-        logging.error(f"{RED}Failed to fetch last message for slow mode check in {RESET}{guild_id}{RED}:{RESET} {e}")
+async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):
+	# Check for a delay based on the slowmode and time since the last message sent
+	last_message_time = None
+	try:
+		async for last_message in channel.history(limit=10):
+			if last_message.author == bot.user:  # Ensure message is sent by bot
+				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
+				break
+	except Exception as e:
+		logging.error(f"{RED}Failed to fetch last message for slow mode check:{RESET} {e}")
 
-    await asyncio.sleep(1)
+	# Ensure it always moves to the next server
+	await asyncio.sleep(1)
 
-    # Slow mode check
-    cooldown_expiration = None
-    if last_message_time:
-        cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
-        if datetime.now(timezone.utc) < cooldown_expiration:
-            next_time = cooldown_expiration.astimezone(cet).strftime('%Y-%m-%d %H:%M:%S %Z')
-            logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
-            return
+	# Check if slowmode or time delay
+	cooldown_expiration = None
+	if last_message_time:
+		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
+		if datetime.now(timezone.utc) < cooldown_expiration:
+			cooldown_expiration_cet = cooldown_expiration.astimezone(cet)
+			logging.info(f"{RED}Skipping{RESET} {guild_id}{RED} due to active slow mode. Next message allowed at{RESET} {cooldown_expiration_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
+			return
 
-    try:
-        # Send advert
-        await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-        logging.info(f"{GREEN}Sent advert in{RESET} {guild_id} ({channel.id})")
-    except discord.HTTPException as e:
-        logging.error(f"{RED}Failed to send advert in {RESET}{guild_id} ({channel.id}){RED}:{RESET} {e}")
+	# Apply a minimum 30 minute gap before sending the advert again
+	current_time = datetime.now(timezone.utc)
+	delay = noSlowmode if guild_id in advertChannels else halfHour
+	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
+		next_allowed_time = last_message_time + timedelta(seconds=delay)
+		next_allowed_time_cet = next_allowed_time.astimezone(cet)
+		logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to delay. Next message allowed at {RESET}{next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
+		return
+
+	# Before sending the new advert, delete the previous adverts
+	try:
+		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
+		for message in bot_messages:
+			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
+				await message.delete()
+				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in{RESET} {guild_id}{GREEN}.{RESET}")
+
+				# Send the new advert
+				try:
+					await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
+					logging.info(f"{GREEN}Sent advert to {RESET}{guild_id}{GREEN} in {RESET}{channel}{GREEN}.{RESET}")
+				except discord.HTTPException as e:
+					logging.error(f"{RED}Failed to send advert:{RESET} {e}{RED}.{RESET}")
+
+	except discord.HTTPException as e:
+		logging.error(f"{RED}Failed to fetch messages for deletion:{RESET} {e}{RED}{RESET}")
 
 async def send_dms(user, message):
 	retry_delay = 5
