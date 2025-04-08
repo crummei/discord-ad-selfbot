@@ -80,59 +80,37 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 
 @bot.event
 async def on_ready():
-	logging.info(f'{YELLOW}Logged in as{RESET} {bot.user}{YELLOW}\n----------------------------\n{RESET}')
-	bot.loop.create_task(periodic_advert_task())  # Start periodic task
-	logging.info(f'{YELLOW}Started periodic advert task{RESET}')
+    logging.info(f'{YELLOW}Logged in as{RESET} {bot.user}{YELLOW}\n----------------------------\n{RESET}')
+    bot.loop.create_task(periodic_advert_task())  # Start periodic task
+    logging.info(f'{YELLOW}Started periodic advert task{RESET}')
 
 async def send_advert(channel, guild_id, allows_invites, allows_markdown, allows_emojis):  
-	logging.debug(f"{YELLOW}Attempting to send advert in guild: {RESET}{guild_id}")
-	last_message_time = None
-	try:
-		async for last_message in channel.history(limit=10):
-			if last_message.author == bot.user:
-				last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
-				break
-	except Exception as e:
-		logging.error(f"{RED}Failed to fetch last message for slow mode check in {RESET}{guild_id}{RED}:{RESET} {e}")
+    last_message_time = None
+    try:
+        async for last_message in channel.history(limit=10):
+            if last_message.author == bot.user:
+                last_message_time = last_message.created_at.replace(tzinfo=timezone.utc)
+                break
+    except Exception as e:
+        logging.error(f"{RED}Failed to fetch last message for slow mode check in {RESET}{guild_id}{RED}:{RESET} {e}")
 
-	await asyncio.sleep(1)
+    await asyncio.sleep(1)
 
-	# Slow mode check
-	cooldown_expiration = None
-	if last_message_time:
-		cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
-		if datetime.now(timezone.utc) < cooldown_expiration:
-			next_time = cooldown_expiration.astimezone(cet).strftime('%Y-%m-%d %H:%M:%S %Z')
-			logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
-			return
+    # Slow mode check
+    cooldown_expiration = None
+    if last_message_time:
+        cooldown_expiration = last_message_time + timedelta(seconds=channel.slowmode_delay)
+        if datetime.now(timezone.utc) < cooldown_expiration:
+            next_time = cooldown_expiration.astimezone(cet).strftime('%Y-%m-%d %H:%M:%S %Z')
+            logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to slow mode. Next message allowed at {RESET}{next_time}{RED}.")
+            return
 
-	# Apply minimum 30min gap before sending advert again
-	current_time = datetime.now(timezone.utc)
-	delay = advertChannels[guild_id][4] if guild_id in advertChannels else halfHour
-	if last_message_time and current_time - last_message_time < timedelta(seconds=delay):
-		next_allowed_time = last_message_time + timedelta(seconds=delay)
-		next_allowed_time_cet = next_allowed_time.astimezone(cet)
-		logging.info(f"{RED}Skipping {RESET}{guild_id}{RED} due to delay. Next message allowed at {RESET}{next_allowed_time_cet.strftime('%Y-%m-%d %H:%M:%S %Z')}{RED}.{RESET}")
-		return
-
-	# Before sending new advert, delete previous
-	try:
-		bot_messages = [msg async for msg in channel.history(limit=10) if msg.author == bot.user]
-		for message in bot_messages:
-			if message.content == advert(allows_invites, allows_markdown, allows_emojis):
-				await message.delete()
-				logging.info(f"{GREEN}Deleted a previous advert message sent by the bot in{RESET} {guild_id}{GREEN}.{RESET}")
-
-				# Send new advert
-				try:
-					await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
-					logging.info(f"{GREEN}Sent advert to {RESET}{guild_id}{GREEN} in {RESET}{channel}{GREEN}.{RESET}")
-				
-				except discord.HTTPException as e:
-					logging.error(f"{RED}Failed to send advert in {RESET}{guild_id} ({channel.id}){RED}:{RESET} {e}")
-
-	except discord.HTTPException as e:
-		logging.error(f"{RED}Failed to fetch messages for deletion:{RESET} {e}{RED}{RESET}")
+    try:
+        # Send advert
+        await channel.send(advert(allows_invites, allows_markdown, allows_emojis))
+        logging.info(f"{GREEN}Sent advert in{RESET} {guild_id} ({channel.id})")
+    except discord.HTTPException as e:
+        logging.error(f"{RED}Failed to send advert in {RESET}{guild_id} ({channel.id}){RED}:{RESET} {e}")
 
 async def send_dms(user, message):
 	retry_delay = 5
@@ -200,36 +178,30 @@ async def sendMessage(type, message, channel, **kwargs):
 
 async def send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay):
     await bot.wait_until_ready()
+    try:
+        channel = await bot.fetch_channel(channel_id)
+    except discord.HTTPException as e:
+        logging.error(f"Failed to fetch channel {channel_id} in {guild_id}: {e}")
+        return
+
     while not bot.is_closed():
-        try:
-            channel = await bot.fetch_channel(channel_id)
-            await sendMessage(
-                type='adverts',
-                message=None,
-                channel=channel,
-                guild_id=guild_id,
-                allows_invites=allows_invites,
-                allows_markdown=allows_markdown,
-                allows_emojis=allows_emojis
-            )
-        except Exception as e:
-            logging.error(f"{RED}Error in send_advert_periodically for guild {RESET}{guild_id}{RED}: {RESET}{e}")
+        await sendMessage(
+            type='adverts',
+            message=None,
+            channel=channel,
+            guild_id=guild_id,
+            allows_invites=allows_invites,
+            allows_markdown=allows_markdown,
+            allows_emojis=allows_emojis
+        )
         await asyncio.sleep(delay)
 
 async def periodic_advert_task():
-    await bot.wait_until_ready()
-    tasks = []
-    for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, delay) in advertChannels.items():
-        task = asyncio.create_task(
-            send_advert_periodically(
-                guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay
-            )
-        )
-        tasks.append(task)
-    try:
-        await asyncio.gather(*tasks)  # Add error handling
-    except Exception as e:
-        logging.error(f"{RED}Error in periodic_advert_task: {RESET}{e}")
+    tasks = [
+        send_advert_periodically(guild_id, channel_id, allows_invites, allows_markdown, allows_emojis, delay)
+        for guild_id, (channel_id, allows_invites, allows_markdown, allows_emojis, delay) in advertChannels.items()
+    ]
+    await asyncio.gather(*tasks)
 
 @bot.event
 async def on_message(message):
