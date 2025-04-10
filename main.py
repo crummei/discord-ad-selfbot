@@ -67,8 +67,8 @@ def advert(invites: bool, markdown: bool, emoji: bool):
 {"> `🎉`" if emoji and markdown else ("🎉" if emoji else ("> " if markdown else ""))} ‣ Occasional giveaways for __**free nitro**__ and more!
 {"> `6️⃣`" if emoji and markdown else ("6️⃣" if emoji else ("> " if markdown else ""))} ‣ Server exclusive __**6mans**__.
 {"> `🎨`" if emoji and markdown else ("🎨" if emoji else ("> " if markdown else ""))} ‣ Plenty of roles to set yourself out from your friends and compete for a variety of positions.
-{"> `📈`" if emoji and markdown else ("📈" if emoji else ("> " if markdown else ""))} ‣ A place to __**grow as a player__** in the competitive scene.
-{"> `🧑‍🤝‍🧑`" if emoji and markdown else ("🧑‍🤝‍🧑" if emoji else ("> " if markdown else ""))} ‣ A nice place to hangout and __**make friends__**!
+{"> `📈`" if emoji and markdown else ("📈" if emoji else ("> " if markdown else ""))} ‣ A place to __**grow as a player**__ in the competitive scene.
+{"> `🧑‍🤝‍🧑`" if emoji and markdown else ("🧑‍🤝‍🧑" if emoji else ("> " if markdown else ""))} ‣ A nice place to hangout and __**make friends**__!
 
 {"## __Requirements__" if markdown else "__**Requirements**__"}
 ‣ None!
